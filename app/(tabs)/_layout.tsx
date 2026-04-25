@@ -1,33 +1,57 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Ionicons } from '@expo/vector-icons';
+import { palette } from '@/constants/design';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: palette.primary,
+        tabBarInactiveTintColor: '#9B958E',
+        headerStyle: { backgroundColor: palette.cream },
+        headerTitleStyle: { color: palette.text, fontFamily: 'BeVietnamPro_700Bold' },
+        tabBarStyle: {
+          backgroundColor: palette.white,
+          borderTopColor: '#EFE6DD',
+          height: 68,
+          paddingBottom: 10,
+          paddingTop: 8,
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons size={22} name="home" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="episodes"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Episodes',
+          tabBarIcon: ({ color }) => <Ionicons size={22} name="play-circle" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="news"
+        options={{
+          title: 'News',
+          tabBarIcon: ({ color }) => <Ionicons size={22} name="newspaper" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="ai-compass"
+        options={{
+          title: 'AI Compass',
+          tabBarIcon: ({ color }) => <Ionicons size={22} name="chatbubbles" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="my-impact"
+        options={{
+          title: 'My Impact',
+          tabBarIcon: ({ color }) => <Ionicons size={22} name="heart" color={color} />,
         }}
       />
     </Tabs>

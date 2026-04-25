@@ -1,98 +1,100 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { FlatList, Image, Pressable, SafeAreaView, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { CategoryTag } from '@/components/ui/category-tag';
+import { DonationCard } from '@/components/ui/donation-card';
+import { featuredCampaigns, families } from '@/data/mock';
+import { PulseSkeleton } from '@/components/ui/pulse-skeleton';
+import { palette } from '@/constants/design';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { width } = useWindowDimensions();
+  const cardWidth = width - 40;
+  const [loading, setLoading] = useState(true);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 900);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const campaignData = useMemo(() => featuredCampaigns, []);
+  const familiesData = useMemo(() => families, []);
+
+  return (
+    <SafeAreaView className="flex-1 bg-cream">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+        <View className="px-5 pb-10 pt-4">
+          <Text className="font-beBold text-3xl tracking-tight text-[#2B2B2B]">Homepage</Text>
+          <Text className="mt-1 font-beRegular text-sm text-[#7F7269]">Mái Ấm Gia Đình Việt</Text>
+
+          <Text className="mb-3 mt-6 font-beSemiBold text-lg tracking-tight text-primary">Featured Campaigns</Text>
+          {loading ? (
+            <PulseSkeleton className="h-56 w-full rounded-2xl" />
+          ) : (
+            <FlatList
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              data={campaignData}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item: campaign }) => (
+                <View
+                  className="mr-3 overflow-hidden bg-white"
+                  style={{
+                    width: cardWidth,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: palette.border,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.07,
+                    shadowRadius: 10,
+                    elevation: 2,
+                  }}>
+                  <Image source={{ uri: campaign.image }} className="h-44 w-full" />
+                  <View className="p-4">
+                    <Text className="font-beSemiBold text-base text-[#2B2B2B]">{campaign.title}</Text>
+                    <Text className="mt-1 font-beRegular text-sm leading-6 text-[#7F7269]">{campaign.subtitle}</Text>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+
+          <Text className="mb-3 mt-7 font-beSemiBold text-lg tracking-tight text-primary">Families You Can Support</Text>
+          {loading ? (
+            <>
+              <PulseSkeleton className="mb-4 h-56 w-full rounded-2xl" />
+              <PulseSkeleton className="mb-4 h-56 w-full rounded-2xl" />
+            </>
+          ) : (
+            <FlatList
+              data={familiesData}
+              scrollEnabled={false}
+              keyExtractor={(item) => item.id}
+              removeClippedSubviews
+              renderItem={({ item: family }) => (
+                <DonationCard
+                  title={family.name}
+                  description={family.description}
+                  image={family.image}
+                  progress={family.progress}
+                  onPress={() => router.push(`/family/${family.id}`)}
+                />
+              )}
+            />
+          )}
+
+          <View className="mt-2 flex-row gap-2">
+            <CategoryTag label="Empathy Driven" highlighted />
+            <CategoryTag label="Transparent Funding" />
+          </View>
+
+          <Pressable className="mt-5 self-start rounded-full bg-primary px-4 py-2">
+            <Text className="font-beSemiBold text-white">Join A Family Journey</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
