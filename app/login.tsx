@@ -1,70 +1,107 @@
-import { Image, Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
-import { useState } from 'react';
+import { Image, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { InfoInput } from '@/components/ui/info-input';
-import { CustomButton } from '@/components/ui/custom-button';
-import { appCopy } from '@/constants/design';
+import { palette } from '@/constants/design';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [secure, setSecure] = useState(true);
 
   return (
-    <SafeAreaView className="flex-1 bg-cream">
-      <ScrollView contentContainerClassName="flex-grow px-5 pb-8">
-        <View className="mt-14 items-center">
-          <Image
-            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3062/3062634.png' }}
-            className="h-24 w-24"
-          />
-          <Text className="mt-3 text-center text-3xl font-bold text-primary">{appCopy.appName}</Text>
-        </View>
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.container}>
+        <Text style={styles.topTitle}>Login</Text>
 
-        <View className="mt-10 rounded-3xl bg-primary p-5">
-          <Text className="text-center text-3xl font-bold text-white">Login</Text>
-          <Text className="mt-2 text-center text-base text-[#F2DDDD]">Welcome Back!</Text>
-
-          <View className="mt-5">
-            <InfoInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@email.com"
-              keyboardType="email-address"
-              labelClassName="text-[#F5D1D1]"
+        <View style={styles.mainCard}>
+          <View style={styles.logoWrap}>
+            <Image
+              source={require('../assets/images/logo.webp')}
+              style={styles.logo}
+              resizeMode="contain"
             />
-            <InfoInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="********"
-              secureTextEntry={secure}
-              onToggleSecure={() => setSecure((prev) => !prev)}
-              labelClassName="text-[#F5D1D1]"
-            />
-            <Pressable>
-              <Text className="mb-4 mt-1 text-right text-xs font-medium text-[#F5D1D1]">Forgot Password?</Text>
-            </Pressable>
-            <CustomButton label="Login" variant="secondary" onPress={() => router.replace('/(tabs)')} />
           </View>
 
-          <View className="my-5 flex-row items-center gap-2">
-            <View className="h-[1px] flex-1 bg-[#B75A5A]" />
-            <Text className="text-sm text-[#F5D1D1]">or</Text>
-            <View className="h-[1px] flex-1 bg-[#B75A5A]" />
-          </View>
-
-          <CustomButton label="Continue with Google" variant="outline" className="bg-white" />
-
-          <Pressable className="mt-5" onPress={() => router.push('/sign-up')}>
-            <Text className="text-center text-sm text-[#F5D1D1]">
-              Don&apos;t have an account? <Text className="font-semibold text-white">Sign Up</Text>
-            </Text>
+          <Pressable
+            onPress={() => router.replace('/(tabs)')}
+            style={styles.bottomSheet}>
+            <View style={styles.dragWrap}>
+              <View style={styles.dragLine} />
+            </View>
+            <Text style={styles.loginText}>Login</Text>
+            <Text style={styles.welcomeText}>Welcome Back !</Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#F2F2F4',
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  topTitle: {
+    color: '#A7A7AD',
+    fontSize: 30,
+    fontFamily: 'BeVietnamPro_400Regular',
+  },
+  mainCard: {
+    flex: 1,
+    marginTop: 16,
+    borderRadius: 28,
+    backgroundColor: palette.cream,
+    overflow: 'hidden',
+  },
+  logoWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 220,
+    height: 86,
+  },
+  bottomSheet: {
+    backgroundColor: palette.primary,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  dragWrap: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  dragLine: {
+    width: 64,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+  },
+  loginText: {
+    textAlign: 'center',
+    color: '#FFFFFF',
+    fontSize: 50,
+    fontFamily: 'Georgia',
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  welcomeText: {
+    textAlign: 'center',
+    color: palette.cream,
+    fontSize: 34,
+    fontFamily: 'Georgia',
+    fontWeight: '400',
+  },
+});
