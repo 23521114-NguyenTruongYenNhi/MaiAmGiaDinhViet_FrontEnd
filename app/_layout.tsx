@@ -8,6 +8,7 @@ import {
     BeVietnamPro_700Bold,
 } from '@expo-google-fonts/be-vietnam-pro';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 
 export default function RootLayout() {
@@ -19,12 +20,12 @@ export default function RootLayout() {
     });
 
     return (
-        <>
+        <GestureHandlerRootView style={{ flex: 1 }}>
             <Stack
                 screenOptions={{
                     headerShown: false,
-                    animation: 'fade', // Chuyển sang fade để mượt hơn
-                    animationDuration: 300, // Tăng lên 300ms
+                    animation: 'fade',
+                    animationDuration: 300,
                     contentStyle: { backgroundColor: '#FAF7F2' },
                 }}>
                 <Stack.Screen name="index" />
@@ -34,6 +35,6 @@ export default function RootLayout() {
                 <Stack.Screen name="family/[id]" options={{ headerShown: true, title: 'Family Story' }} />
             </Stack>
             <StatusBar style="dark" />
-        </>
+        </GestureHandlerRootView>
     );
 }
