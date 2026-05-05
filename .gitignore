@@ -41,3 +41,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+.vs/
+node_modules/
+.expo/
+dist/
+*.jfm
