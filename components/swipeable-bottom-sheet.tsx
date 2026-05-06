@@ -32,7 +32,7 @@ export default function SwipeableBottomSheet({ children }: SwipeableBottomSheetP
 
     useEffect(() => {
         translateY.value = withSpring(SHEET_MAX_TOP, SPRING_CONFIG);
-    }, []);
+    }, [translateY]);
 
     const panGesture = Gesture.Pan()
         .onStart(() => {

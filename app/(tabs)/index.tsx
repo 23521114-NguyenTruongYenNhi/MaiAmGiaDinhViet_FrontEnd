@@ -1,100 +1,274 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, SafeAreaView, ScrollView, Text, View, useWindowDimensions } from 'react-native';
-import { CategoryTag } from '@/components/ui/category-tag';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import {
+  Image,
+  ImageBackground,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { DonationCard } from '@/components/ui/donation-card';
-import { featuredCampaigns, families } from '@/data/mock';
 import { PulseSkeleton } from '@/components/ui/pulse-skeleton';
-import { palette } from '@/constants/design';
+import { appCopy, palette } from '@/constants/design';
+import { episodes, families, featuredCampaigns, newsFeed } from '@/data/mock';
+
+function SectionHeader({ title, action, onPress }: { title: string; action?: string; onPress?: () => void }) {
+  return (
+    <View className="mb-4 flex-row items-center justify-between">
+      <View className="flex-1 flex-row items-center pr-3">
+        <View className="mr-3 w-1.5 rounded-full bg-primary" style={styles.sectionRail} />
+        <Text className="flex-1 font-beBold text-[24px] leading-[30px] text-[#261F1A]">{title}</Text>
+      </View>
+      {action ? (
+        <Pressable onPress={onPress} className="flex-row items-center rounded-full bg-[#F3EAE1] px-3 py-2" hitSlop={8}>
+          <Text className="font-beSemiBold text-xs text-primary">{action}</Text>
+          <Ionicons name="chevron-forward" size={14} color={palette.primary} style={{ marginLeft: 3 }} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
 
 export default function HomeScreen() {
-  const { width } = useWindowDimensions();
-  const cardWidth = width - 40;
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 900);
+    const timer = setTimeout(() => setLoading(false), 650);
     return () => clearTimeout(timer);
   }, []);
 
-  const campaignData = useMemo(() => featuredCampaigns, []);
-  const familiesData = useMemo(() => families, []);
+  const topStory = featuredCampaigns[0];
 
   return (
-    <SafeAreaView className="flex-1 bg-cream">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        <View className="px-5 pb-10 pt-4">
-          <Text className="font-beBold text-3xl tracking-tight text-[#2B2B2B]">Homepage</Text>
-          <Text className="mt-1 font-beRegular text-sm text-[#7F7269]">Mái Ấm Gia Đình Việt</Text>
+    <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'left', 'right']}>
+      <StatusBar style="dark" />
 
-          <Text className="mb-3 mt-6 font-beSemiBold text-lg tracking-tight text-primary">Featured Campaigns</Text>
-          {loading ? (
-            <PulseSkeleton className="h-56 w-full rounded-2xl" />
-          ) : (
-            <FlatList
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              data={campaignData}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item: campaign }) => (
-                <View
-                  className="mr-3 overflow-hidden bg-white"
-                  style={{
-                    width: cardWidth,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: palette.border,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.07,
-                    shadowRadius: 10,
-                    elevation: 2,
-                  }}>
-                  <Image source={{ uri: campaign.image }} className="h-44 w-full" />
-                  <View className="p-4">
-                    <Text className="font-beSemiBold text-base text-[#2B2B2B]">{campaign.title}</Text>
-                    <Text className="mt-1 font-beRegular text-sm leading-6 text-[#7F7269]">{campaign.subtitle}</Text>
+      <ScrollView className="flex-1" contentContainerStyle={styles.scrollContent} contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false}>
+        <View style={styles.page}>
+          <View className="bg-[#FAF7F2] px-4 pb-3">
+            <View className="flex-row items-center justify-between">
+              <Pressable onPress={() => router.push('/menu')} className="h-11 w-11 items-center justify-center rounded-full bg-white" style={styles.headerButton}>
+                <Ionicons name="menu" size={21} color={palette.text} />
+              </Pressable>
+
+              <Image source={require('../../assets/images/logo.webp')} resizeMode="contain" style={styles.logo} accessible accessibilityLabel={appCopy.appName} />
+
+              <Pressable onPress={() => router.push('/notifications')} className="h-11 w-11 items-center justify-center rounded-full bg-white" style={styles.headerButton}>
+                <Ionicons name="notifications-outline" size={21} color={palette.text} />
+                <View className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-primary" />
+              </Pressable>
+            </View>
+          </View>
+
+          <View className="px-4">
+            {loading ? (
+              <PulseSkeleton className="h-[430px] w-full rounded-[28px]" />
+            ) : (
+              <Pressable onPress={() => router.push('/(tabs)/my-impact')} className="overflow-hidden rounded-[28px] bg-white" style={styles.heroCard}>
+                <ImageBackground source={topStory.image} resizeMode="cover" style={styles.heroImage}>
+                  <View style={styles.heroOverlay} />
+                  <View className="flex-1 justify-between p-5">
+                    <View className="self-start rounded-full bg-white/90 px-3 py-2">
+                      <Text className="font-beBold text-xs uppercase text-primary">Verified family support</Text>
+                    </View>
+
+                    <View>
+                      <Text className="font-beBold text-[30px] leading-[38px] text-white" numberOfLines={3}>
+                        {topStory.title}
+                      </Text>
+                      <Text className="mt-2 font-beMedium text-[15px] leading-6 text-white/90" numberOfLines={3}>
+                        {topStory.subtitle}
+                      </Text>
+
+                      <View className="mt-5 flex-row justify-between">
+                        <View className="rounded-2xl bg-white/95 p-3" style={styles.heroStat}>
+                          <Text className="font-beBold text-lg text-[#261F1A]">{families.length}</Text>
+                          <Text className="font-beMedium text-[11px] leading-4 text-[#756B63]">families ready to support</Text>
+                        </View>
+                        <View className="rounded-2xl bg-white/95 p-3" style={styles.heroStat}>
+                          <Text className="font-beBold text-lg text-[#261F1A]">100%</Text>
+                          <Text className="font-beMedium text-[11px] leading-4 text-[#756B63]">bank details visible</Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              )}
-            />
-          )}
+                </ImageBackground>
+              </Pressable>
+            )}
 
-          <Text className="mb-3 mt-7 font-beSemiBold text-lg tracking-tight text-primary">Families You Can Support</Text>
-          {loading ? (
-            <>
-              <PulseSkeleton className="mb-4 h-56 w-full rounded-2xl" />
-              <PulseSkeleton className="mb-4 h-56 w-full rounded-2xl" />
-            </>
-          ) : (
-            <FlatList
-              data={familiesData}
-              scrollEnabled={false}
-              keyExtractor={(item) => item.id}
-              removeClippedSubviews
-              renderItem={({ item: family }) => (
+            <View className="mt-5 flex-row">
+              <Pressable onPress={() => router.push('/(tabs)/my-impact')} className="mr-3 flex-1 rounded-2xl bg-primary px-4 py-4" style={styles.actionCard}>
+                <Ionicons name="people" size={22} color="#fff" />
+                <Text className="mt-2 font-beBold text-base text-white">Browse families</Text>
+                <Text className="mt-1 font-beRegular text-xs leading-5 text-white/80">Open verified family profiles</Text>
+              </Pressable>
+
+              <Pressable onPress={() => router.push('/(tabs)/ai-compass')} className="flex-1 rounded-2xl bg-white px-4 py-4" style={styles.actionCard}>
+                <Ionicons name="chatbubbles" size={24} color={palette.primary} />
+                <Text className="mt-2 font-beBold text-base text-[#261F1A]">Ask the guide</Text>
+                <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">Chat about families and support</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View className="mt-7 bg-white px-4 py-6">
+            <SectionHeader title="Family stories on air" action="View all" onPress={() => router.push('/(tabs)/episodes')} />
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+              {episodes.map((episode, index) => (
+                <Pressable
+                  key={episode.id}
+                  onPress={() => router.push('/(tabs)/episodes')}
+                  className="overflow-hidden rounded-2xl bg-[#FAF7F2]"
+                  style={[styles.episodeCard, index !== episodes.length - 1 && styles.itemSpacing]}
+                >
+                  <View>
+                    <Image source={episode.thumbnail} resizeMode="cover" style={styles.episodeImage} />
+                    <View className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1">
+                      <Text className="font-beMedium text-[10px] text-white">{episode.duration}</Text>
+                    </View>
+                    <View className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1">
+                      <Text className="font-beBold text-[10px] uppercase text-primary">{episode.host}</Text>
+                    </View>
+                  </View>
+                  <View className="p-3">
+                    <Text className="font-beSemiBold text-[14px] leading-5 text-[#261F1A]" numberOfLines={2}>
+                      {episode.title}
+                    </Text>
+                    <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]" numberOfLines={2}>
+                      {episode.summary}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View className="bg-[#FAF7F2] px-4 py-6">
+            <SectionHeader title="Direct giving directory" action="See directory" onPress={() => router.push('/(tabs)/my-impact')} />
+            {loading ? (
+              <PulseSkeleton className="mb-4 h-64 w-full rounded-2xl" />
+            ) : (
+              families.slice(0, 2).map((family) => (
                 <DonationCard
+                  key={family.id}
                   title={family.name}
-                  description={family.description}
+                  description={`${family.location} - ${family.supportFocus}`}
                   image={family.image}
                   progress={family.progress}
                   onPress={() => router.push(`/family/${family.id}`)}
                 />
-              )}
-            />
-          )}
-
-          <View className="mt-2 flex-row gap-2">
-            <CategoryTag label="Empathy Driven" highlighted />
-            <CategoryTag label="Transparent Funding" />
+              ))
+            )}
           </View>
 
-          <Pressable className="mt-5 self-start rounded-full bg-primary px-4 py-2">
-            <Text className="font-beSemiBold text-white">Join A Family Journey</Text>
-          </Pressable>
+          <View className="bg-white px-4 py-6">
+            <SectionHeader title="Latest program updates" action="Open feed" onPress={() => router.push('/(tabs)/news')} />
+
+            {newsFeed.map((news, index) => (
+              <Pressable
+                key={news.id}
+                onPress={() => router.push({ pathname: '/update/[id]', params: { id: news.id } })}
+                className="flex-row py-4"
+                style={index !== newsFeed.length - 1 ? styles.newsDivider : undefined}
+              >
+                <View className="mr-3 h-11 w-11 items-center justify-center rounded-2xl bg-[#F3EAE1]">
+                  <Ionicons name={news.isNew ? 'sparkles' : 'newspaper-outline'} size={19} color={palette.primary} />
+                </View>
+                <View className="flex-1">
+                  <View className="mb-1 flex-row items-center justify-between">
+                    <Text className="font-beBold text-[11px] uppercase text-[#B7842D]">{news.category}</Text>
+                    <Text className="font-beMedium text-[11px] text-[#8E8177]">{news.readTime}</Text>
+                  </View>
+                  <Text className="font-beSemiBold text-[15px] leading-6 text-[#261F1A]" numberOfLines={2}>
+                    {news.title}
+                  </Text>
+                  <Text className="mt-1 font-beRegular text-sm leading-5 text-[#756B63]" numberOfLines={2}>
+                    {news.excerpt}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  actionCard: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.08 : 0.05,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  episodeCard: {
+    width: 244,
+  },
+  episodeImage: {
+    height: 138,
+    width: '100%',
+  },
+  headerButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.08 : 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  heroCard: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.16 : 0.1,
+    shadowRadius: 28,
+    elevation: 5,
+  },
+  heroImage: {
+    height: 430,
+    overflow: 'hidden',
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(34, 24, 19, 0.44)',
+  },
+  heroStat: {
+    minHeight: 82,
+    width: '48%',
+    maxWidth: 220,
+  },
+  horizontalList: {
+    paddingRight: 16,
+  },
+  itemSpacing: {
+    marginRight: 14,
+  },
+  logo: {
+    height: 66,
+    width: 212,
+  },
+  newsDivider: {
+    borderBottomColor: '#EFE6DD',
+    borderBottomWidth: 1,
+  },
+  page: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 430,
+  },
+  scrollContent: {
+    paddingBottom: 28,
+  },
+  sectionRail: {
+    alignSelf: 'stretch',
+    minHeight: 30,
+  },
+});

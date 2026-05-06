@@ -12,7 +12,7 @@ export const palette = {
 } as const;
 
 export const appCopy = {
-  appName: 'Mái Ấm Gia Đình Việt',
+  appName: 'Mai Am Gia Dinh Viet',
 } as const;
 
 export const typography = {

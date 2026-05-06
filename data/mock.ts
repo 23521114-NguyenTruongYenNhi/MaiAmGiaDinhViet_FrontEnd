@@ -1,8 +1,10 @@
+import { ImageSourcePropType } from 'react-native';
+
 export type Campaign = {
   id: string;
   title: string;
   subtitle: string;
-  image: string;
+  image: ImageSourcePropType;
 };
 
 export type NewsItem = {
@@ -10,6 +12,9 @@ export type NewsItem = {
   category: string;
   title: string;
   excerpt: string;
+  date: string;
+  readTime: string;
+  body: string;
   isNew?: boolean;
 };
 
@@ -17,109 +22,165 @@ export type Episode = {
   id: string;
   title: string;
   duration: string;
-  thumbnail: string;
+  thumbnail: ImageSourcePropType;
+  host: string;
+  summary: string;
 };
 
 export type Family = {
   id: string;
   name: string;
   description: string;
-  image: string;
+  image: ImageSourcePropType;
   progress: number;
   bank: string;
   beneficiary: string;
   accountNumber: string;
+  location: string;
+  urgency: 'High' | 'Medium';
+  childrenCount: number;
+  monthlyNeed: string;
+  supportFocus: string;
+  lastVerified: string;
 };
+
+const heroImage = require('../assets/images/maiam-episode-hero.jpg');
+const familyImage1 = require('../assets/images/maiam-family-1.jpg');
+const familyImage2 = require('../assets/images/maiam-family-2.jpg');
+const familyImage3 = require('../assets/images/maiam-family-3.jpg');
 
 export const featuredCampaigns: Campaign[] = [
   {
     id: 'camp-1',
-    title: 'Hope Driven with Quality Education Resources',
-    subtitle: 'Support school kits and mentoring programs',
-    image: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=1200&q=80',
+    title: 'Mai Am Gia Dinh Viet',
+    subtitle: 'A trusted giving platform connecting donors with verified families who need timely support.',
+    image: heroImage,
   },
   {
     id: 'camp-2',
-    title: 'Provide Clean Water for Remote Villages',
-    subtitle: 'Build water systems for mountain families',
-    image: 'https://images.unsplash.com/photo-1527072681445-7f6f5c26c7c9?auto=format&fit=crop&w=1200&q=80',
+    title: 'Direct giving with verified family stories',
+    subtitle: 'Transparent beneficiary details, verified updates, and a calmer donation experience on mobile.',
+    image: familyImage1,
   },
   {
     id: 'camp-3',
-    title: 'Summer Youth Program',
-    subtitle: 'Creative and social activities for children',
-    image: 'https://images.unsplash.com/photo-1516302752625-fcc3c50ae61f?auto=format&fit=crop&w=1200&q=80',
+    title: 'Community care that reaches real homes',
+    subtitle: 'Follow each story, understand the need, and support the right household with confidence.',
+    image: familyImage2,
   },
 ];
 
 export const newsFeed: NewsItem[] = [
   {
     id: 'news-1',
-    category: 'Success Stories',
-    title: "Ly Family's Roof Finished",
-    excerpt: 'Community donations funded materials and volunteer labor in 3 weeks.',
+    category: 'Program Update',
+    title: 'Verified family stories are now easier to follow across Vietnam',
+    excerpt: 'Recent field updates focus on home stability, school continuity, and direct support for vulnerable households.',
+    date: 'May 2026',
+    readTime: '4 min read',
+    body: 'Family stories are now organized around household stability, education access, and clear giving steps. The mobile experience helps donors understand verified needs faster and move from browsing to support with less friction.',
     isNew: true,
   },
   {
     id: 'news-2',
-    category: 'Charity Events',
-    title: 'Season 3 Officially Kicks Off in HCMC',
-    excerpt: 'A weekend fundraising event gathered over 500 participants.',
+    category: 'Community',
+    title: 'Community support helps families receive assistance faster',
+    excerpt: 'A growing donor network helps families move from urgent relief toward more stable monthly support.',
+    date: 'April 2026',
+    readTime: '3 min read',
+    body: 'Community participation remains the engine behind the program. As more donors follow verified family stories, support can be directed more quickly to urgent cases while still keeping transparency at the center of the experience.',
   },
   {
     id: 'news-3',
-    category: 'Program News',
-    title: 'New Partnership with Local Medical Centers',
-    excerpt: 'Expanded healthcare outreach for underserved communities.',
+    category: 'Verification',
+    title: 'Why verified bank details matter in direct giving',
+    excerpt: 'Clear bank names, beneficiary names, and verification dates improve trust at donation time.',
+    date: 'April 2026',
+    readTime: '5 min read',
+    body: 'Verification is more than an administrative step. It gives donors confidence that beneficiary details are current, makes copying payment information simpler, and helps each family profile feel trustworthy on smaller screens.',
   },
 ];
 
 export const quickSuggestions = [
-  'How to donate?',
-  'About the program',
-  'How do families get selected?',
+  'Show families with urgent needs',
+  'How do I copy bank details?',
+  'Which stories were updated this week?',
 ];
 
 export const episodes: Episode[] = [
   {
     id: 'ep-1',
-    title: "The Silva Family's New Beginning",
-    duration: '10:45',
-    thumbnail: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=1200&q=80',
+    title: 'A family rebuilding stability and hope',
+    duration: '45:00',
+    thumbnail: heroImage,
+    host: 'Featured episode',
+    summary: 'A closer look at how community support helps a family protect housing and school access.',
   },
   {
     id: 'ep-2',
-    title: 'Clean Water for Kheo Village',
-    duration: '08:20',
-    thumbnail: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?auto=format&fit=crop&w=1200&q=80',
+    title: 'Field visits that turn care into action',
+    duration: '42:30',
+    thumbnail: familyImage2,
+    host: 'Latest release',
+    summary: 'This episode follows the path from profile verification to donor support and field assistance.',
   },
   {
     id: 'ep-3',
-    title: 'Education First: Rural Schools',
-    duration: '09:58',
-    thumbnail: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1200&q=80',
+    title: 'The story behind each support milestone',
+    duration: '40:15',
+    thumbnail: familyImage3,
+    host: 'Community pick',
+    summary: 'Watch how updated family profiles help donors understand urgent needs and next steps more clearly.',
   },
 ];
 
 export const families: Family[] = [
   {
     id: 'fam-1',
-    name: 'The Rodriguez Family',
-    description: 'Seeking support for school supplies and tuition for the upcoming semester.',
-    image: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1200&q=80',
+    name: 'Ngoc Family',
+    description: 'The family needs support for school expenses, daily essentials, and safer housing conditions for two children.',
+    image: familyImage1,
     progress: 64,
     bank: 'Vietcombank',
     beneficiary: 'Nguyen Thi L.',
     accountNumber: '1029 4485 9920',
+    location: 'Quang Nam',
+    urgency: 'High',
+    childrenCount: 2,
+    monthlyNeed: '$220/month',
+    supportFocus: 'Education support and household stability',
+    lastVerified: 'Verified on May 3, 2026',
   },
   {
     id: 'fam-2',
-    name: 'Green Valley Community',
-    description: 'Funding clean water access for 45 families in the highlands.',
-    image: 'https://images.unsplash.com/photo-1475776408506-9a5371e7a068?auto=format&fit=crop&w=1200&q=80',
+    name: 'Minh Family',
+    description: 'This household needs continued help with medical essentials while keeping the children in school.',
+    image: familyImage2,
     progress: 47,
     bank: 'BIDV',
     beneficiary: 'Tran Van M.',
     accountNumber: '6638 9921 0042',
+    location: 'Phu Yen',
+    urgency: 'Medium',
+    childrenCount: 3,
+    monthlyNeed: '$310/month',
+    supportFocus: 'Medical support and school continuity',
+    lastVerified: 'Verified on April 29, 2026',
+  },
+  {
+    id: 'fam-3',
+    name: 'Lan Family',
+    description: 'A single caregiver needs help with food, transportation, and consistent school attendance after recent hardship.',
+    image: familyImage3,
+    progress: 31,
+    bank: 'Agribank',
+    beneficiary: 'Pham Thi H.',
+    accountNumber: '8704 2201 5586',
+    location: 'Can Tho',
+    urgency: 'High',
+    childrenCount: 2,
+    monthlyNeed: '$260/month',
+    supportFocus: 'Food assistance and school transportation',
+    lastVerified: 'Verified on May 1, 2026',
   },
 ];
