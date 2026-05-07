@@ -87,15 +87,9 @@ export default function HomeScreen() {
                         {topStory.subtitle}
                       </Text>
 
-                      <View className="mt-5 flex-row justify-between">
-                        <View className="rounded-2xl bg-white/95 p-3" style={styles.heroStat}>
-                          <Text className="font-beBold text-lg text-[#261F1A]">{families.length}</Text>
-                          <Text className="font-beMedium text-[11px] leading-4 text-[#756B63]">families ready to support</Text>
-                        </View>
-                        <View className="rounded-2xl bg-white/95 p-3" style={styles.heroStat}>
-                          <Text className="font-beBold text-lg text-[#261F1A]">100%</Text>
-                          <Text className="font-beMedium text-[11px] leading-4 text-[#756B63]">bank details visible</Text>
-                        </View>
+                      <View className="mt-5 self-start flex-row items-center rounded-full bg-white px-4 py-3">
+                        <Text className="font-beBold text-sm text-primary">Explore families</Text>
+                        <Ionicons name="arrow-forward" size={16} color={palette.primary} style={{ marginLeft: 8 }} />
                       </View>
                     </View>
                   </View>
@@ -106,20 +100,20 @@ export default function HomeScreen() {
             <View className="mt-5 flex-row">
               <Pressable onPress={() => router.push('/(tabs)/my-impact')} className="mr-3 flex-1 rounded-2xl bg-primary px-4 py-4" style={styles.actionCard}>
                 <Ionicons name="people" size={22} color="#fff" />
-                <Text className="mt-2 font-beBold text-base text-white">Browse families</Text>
-                <Text className="mt-1 font-beRegular text-xs leading-5 text-white/80">Open verified family profiles</Text>
+                <Text className="mt-2 font-beBold text-base text-white">Support families</Text>
+                <Text className="mt-1 font-beRegular text-xs leading-5 text-white/80">Verified household profiles</Text>
               </Pressable>
 
               <Pressable onPress={() => router.push('/(tabs)/ai-compass')} className="flex-1 rounded-2xl bg-white px-4 py-4" style={styles.actionCard}>
                 <Ionicons name="chatbubbles" size={24} color={palette.primary} />
-                <Text className="mt-2 font-beBold text-base text-[#261F1A]">Ask the guide</Text>
-                <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">Chat about families and support</Text>
+                <Text className="mt-2 font-beBold text-base text-[#261F1A]">Ask & Find</Text>
+                <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">Search families, episodes, and donations</Text>
               </Pressable>
             </View>
           </View>
 
           <View className="mt-7 bg-white px-4 py-6">
-            <SectionHeader title="Family stories on air" action="View all" onPress={() => router.push('/(tabs)/episodes')} />
+            <SectionHeader title="Featured Stories" action="View all" onPress={() => router.push('/(tabs)/episodes')} />
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
               {episodes.map((episode, index) => (
@@ -152,7 +146,7 @@ export default function HomeScreen() {
           </View>
 
           <View className="bg-[#FAF7F2] px-4 py-6">
-            <SectionHeader title="Direct giving directory" action="See directory" onPress={() => router.push('/(tabs)/my-impact')} />
+            <SectionHeader title="Verified Families" action="View all" onPress={() => router.push('/(tabs)/my-impact')} />
             {loading ? (
               <PulseSkeleton className="mb-4 h-64 w-full rounded-2xl" />
             ) : (
@@ -162,7 +156,6 @@ export default function HomeScreen() {
                   title={family.name}
                   description={`${family.location} - ${family.supportFocus}`}
                   image={family.image}
-                  progress={family.progress}
                   onPress={() => router.push(`/family/${family.id}`)}
                 />
               ))
@@ -170,7 +163,7 @@ export default function HomeScreen() {
           </View>
 
           <View className="bg-white px-4 py-6">
-            <SectionHeader title="Latest program updates" action="Open feed" onPress={() => router.push('/(tabs)/news')} />
+            <SectionHeader title="News & Updates" action="Open feed" onPress={() => router.push('/(tabs)/news')} />
 
             {newsFeed.map((news, index) => (
               <Pressable
@@ -239,11 +232,6 @@ const styles = StyleSheet.create({
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(34, 24, 19, 0.44)',
-  },
-  heroStat: {
-    minHeight: 82,
-    width: '48%',
-    maxWidth: 220,
   },
   horizontalList: {
     paddingRight: 16,

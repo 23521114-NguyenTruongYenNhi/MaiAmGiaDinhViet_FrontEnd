@@ -53,12 +53,12 @@ export const featuredCampaigns: Campaign[] = [
   {
     id: 'camp-1',
     title: 'Mai Am Gia Dinh Viet',
-    subtitle: 'A trusted giving platform connecting donors with verified families who need timely support.',
+    subtitle: 'A trusted support platform connecting donors with verified households in urgent need.',
     image: heroImage,
   },
   {
     id: 'camp-2',
-    title: 'Direct giving with verified family stories',
+    title: 'Verified support for real households',
     subtitle: 'Transparent beneficiary details, verified updates, and a calmer donation experience on mobile.',
     image: familyImage1,
   },
@@ -75,10 +75,10 @@ export const newsFeed: NewsItem[] = [
     id: 'news-1',
     category: 'Program Update',
     title: 'Verified family stories are now easier to follow across Vietnam',
-    excerpt: 'Recent field updates focus on home stability, school continuity, and direct support for vulnerable households.',
+    excerpt: 'Recent field updates focus on home stability, school continuity, and accountable household support.',
     date: 'May 2026',
     readTime: '4 min read',
-    body: 'Family stories are now organized around household stability, education access, and clear giving steps. The mobile experience helps donors understand verified needs faster and move from browsing to support with less friction.',
+    body: 'Family stories are now organized around household stability, education access, and clear donation steps. The mobile experience helps donors understand verified needs faster and move from browsing to support with less friction.',
     isNew: true,
   },
   {
@@ -88,12 +88,12 @@ export const newsFeed: NewsItem[] = [
     excerpt: 'A growing donor network helps families move from urgent relief toward more stable monthly support.',
     date: 'April 2026',
     readTime: '3 min read',
-    body: 'Community participation remains the engine behind the program. As more donors follow verified family stories, support can be directed more quickly to urgent cases while still keeping transparency at the center of the experience.',
+    body: 'Community participation remains the engine behind the program. As more donors follow verified family stories, support can be directed more quickly to urgent households while still keeping transparency at the center of the experience.',
   },
   {
     id: 'news-3',
     category: 'Verification',
-    title: 'Why verified bank details matter in direct giving',
+    title: 'Why verified bank details matter',
     excerpt: 'Clear bank names, beneficiary names, and verification dates improve trust at donation time.',
     date: 'April 2026',
     readTime: '5 min read',
@@ -102,8 +102,8 @@ export const newsFeed: NewsItem[] = [
 ];
 
 export const quickSuggestions = [
-  'Show families with urgent needs',
-  'How do I copy bank details?',
+  'Show urgent families',
+  'How do I copy payment details?',
   'Which stories were updated this week?',
 ];
 

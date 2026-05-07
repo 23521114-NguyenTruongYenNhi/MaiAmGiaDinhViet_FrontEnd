@@ -28,7 +28,7 @@ export default function FamilyStoryDetailScreen() {
           <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full bg-white">
             <Ionicons name="arrow-back" size={20} color={palette.text} />
           </Pressable>
-          <Text className="font-beSemiBold text-base text-[#261F1A]">Family support</Text>
+          <Text className="font-beSemiBold text-base text-[#261F1A]">Family profile</Text>
           <View className="h-11 w-11" />
         </View>
 
@@ -85,7 +85,7 @@ export default function FamilyStoryDetailScreen() {
             </View>
           ) : null}
 
-          <CustomButton label="Open support guide" variant="primary" onPress={() => router.push('/(tabs)/ai-compass')} className="mt-3" />
+          <CustomButton label="Ask about this profile" variant="primary" onPress={() => router.push('/(tabs)/ai-compass')} className="mt-3" />
           <View className="mt-3 flex-row items-center justify-center gap-1">
             <Ionicons name="shield-checkmark" size={14} color={palette.primary} />
             <Text className="font-beMedium text-xs text-primary">Verified by Mai Am Gia Dinh Viet</Text>

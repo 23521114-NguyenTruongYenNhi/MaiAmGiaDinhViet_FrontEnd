@@ -27,7 +27,7 @@ const starterMessages: Message[] = [
   {
     id: 'm1',
     role: 'assistant',
-    text: 'Hello. Ask me about urgent families, bank details, locations, or the latest updates.',
+    text: 'Hello. Tell me what you know, such as a family name, location, episode, or donation question. I will help you find the right information.',
   },
 ];
 
@@ -49,7 +49,7 @@ function createReply(question: string): Message {
     return {
       id: `${Date.now()}-assistant`,
       role: 'assistant',
-      text: 'Every family profile includes bank name, beneficiary, account number, and verification date. Open a family profile to copy the account number in one tap.',
+      text: 'Every family profile includes bank name, account holder, account number, and verification date. Open a profile to copy payment details in one tap.',
       familyId: families[0].id,
     };
   }
@@ -67,14 +67,14 @@ function createReply(question: string): Message {
     return {
       id: `${Date.now()}-assistant`,
       role: 'assistant',
-      text: 'You can review current verification and program changes in Updates. The feed is filtered and each card opens a clean detail view.',
+      text: 'You can review verification notes and program changes in News & Updates. Each item opens a focused detail view.',
     };
   }
 
   return {
     id: `${Date.now()}-assistant`,
     role: 'assistant',
-    text: 'I can help you find the right family by urgency, location, or support focus. Try asking about urgent families, Quang Nam, or bank details.',
+    text: 'I can help you find families by urgency, location, or support focus. Try asking about urgent families, Quang Nam, or payment details.',
   };
 }
 
@@ -111,9 +111,9 @@ export default function AICompassScreen() {
           ListHeaderComponent={
             <View style={styles.page}>
               <ScreenHeader
-                title="Support guide"
+                title="Ask & Find"
                 icon="chatbubbles"
-                meta="AI assistant"
+                meta="Smart search"
                 trailing={
                   <View className="flex-row items-center rounded-full bg-white px-3 py-2">
                     <View className="mr-2 h-2.5 w-2.5 rounded-full bg-[#1F8B4C]" />
@@ -123,7 +123,7 @@ export default function AICompassScreen() {
               />
 
               <View className="mt-5 rounded-[28px] bg-white p-5" style={styles.heroCard}>
-                <Text className="font-beSemiBold text-base text-[#261F1A]">Ask anything about support</Text>
+                <Text className="font-beSemiBold text-base text-[#261F1A]">Search by family, episode, or donation detail</Text>
                 <View className="mt-4 flex-row flex-wrap gap-2">
                   {quickSuggestions.map((item) => (
                     <Pressable key={item} onPress={() => send(item)} className="rounded-full bg-[#F5EEE7] px-3 py-2">
@@ -142,7 +142,7 @@ export default function AICompassScreen() {
                   <Text className={`font-beRegular text-sm leading-6 ${item.role === 'assistant' ? 'text-[#261F1A]' : 'text-white'}`}>{item.text}</Text>
                   {item.familyId ? (
                     <Pressable onPress={() => router.push(`/family/${item.familyId}`)} className="mt-3 self-start rounded-full bg-[#F3EAE1] px-3 py-2">
-                      <Text className="font-beSemiBold text-xs text-primary">Open family profile</Text>
+                      <Text className="font-beSemiBold text-xs text-primary">Open profile</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -158,7 +158,7 @@ export default function AICompassScreen() {
                 className="mr-2 h-11 flex-1 font-beRegular text-sm text-[#2B2B2B]"
                 value={input}
                 onChangeText={setInput}
-                placeholder="Ask about families, locations, or bank details"
+                placeholder="Type a family, episode, or donation question"
                 placeholderTextColor="#9E978F"
                 textAlignVertical="center"
               />

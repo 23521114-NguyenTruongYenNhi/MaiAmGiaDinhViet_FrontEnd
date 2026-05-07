@@ -36,6 +36,7 @@ export default function RootLayout() {
         <Stack.Screen name="family/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="update/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="menu" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="password-help" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />

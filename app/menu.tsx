@@ -6,9 +6,10 @@ import { palette } from '@/constants/design';
 
 const items = [
   { label: 'Families', caption: 'Verified support profiles', icon: 'people', route: '/(tabs)/my-impact' as const },
-  { label: 'Guide', caption: 'Ask the AI assistant', icon: 'chatbubbles', route: '/(tabs)/ai-compass' as const },
+  { label: 'Ask & Find', caption: 'Search families and episodes', icon: 'chatbubbles', route: '/(tabs)/ai-compass' as const },
   { label: 'Episodes', caption: 'Program stories', icon: 'play-circle', route: '/(tabs)/episodes' as const },
-  { label: 'Updates', caption: 'Latest news', icon: 'newspaper', route: '/(tabs)/news' as const },
+  { label: 'News', caption: 'Latest updates', icon: 'newspaper', route: '/(tabs)/news' as const },
+  { label: 'Settings', caption: 'Account and preferences', icon: 'settings', route: '/settings' as const },
   { label: 'Admin', caption: 'Management dashboard', icon: 'shield-checkmark', route: '/admin' as const },
 ];
 
