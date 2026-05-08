@@ -47,15 +47,24 @@ function splitLongParagraph(text: string) {
   return paragraphs;
 }
 
+function normalizeScrapedText(text: string) {
+  return text
+    .replace(/\r/g, '')
+    .split(/\n{2,}/)
+    .map((chunk) => chunk.replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 export function getFormattedBlocks(text?: string | null): ContentBlock[] {
-  const cleaned = text?.replace(/\r/g, '').trim();
+  const cleaned = text ? normalizeScrapedText(text).trim() : '';
 
   if (!cleaned) {
     return [];
   }
 
   const lines = cleaned
-    .split(/\n+/)
+    .split(/\n{2,}/)
     .map((line) => line.trim())
     .filter(Boolean);
 

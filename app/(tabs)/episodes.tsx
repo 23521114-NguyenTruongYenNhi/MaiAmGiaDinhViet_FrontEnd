@@ -12,6 +12,7 @@ type EpisodeRow = BackendEpisode & {
   firstCaseId?: string;
   familyCount: number;
   imageIndex: number;
+  families: FamilyStory[];
 };
 
 export default function EpisodesScreen() {
@@ -36,6 +37,7 @@ export default function EpisodesScreen() {
             firstCaseId: episodeStories[0]?.caseId,
             familyCount: episodeStories.length,
             imageIndex: index,
+            families: episodeStories.slice(0, 3),
           };
         })
         .sort((a, b) => b.episode_no - a.episode_no);
@@ -121,25 +123,48 @@ export default function EpisodesScreen() {
           <View className="mt-7 pb-20">
             <Text className="mb-4 font-beBold text-xl text-[#261F1A]">All episodes</Text>
             {episodes.map((item, index) => (
-              <Pressable
+              <View
                 key={item.id}
-                onPress={() => item.firstCaseId && router.push(`/family/${item.firstCaseId}`)}
-                className="mb-4 flex-row rounded-[24px] bg-white p-3"
+                className="mb-4 rounded-[24px] bg-white p-3"
                 style={styles.rowCard}
               >
-                <Image source={imageFromUrl(null, index)} resizeMode="cover" style={styles.rowImage} />
-                <View className="ml-3 flex-1 justify-between py-1">
-                  <View>
-                    <Text className="font-beBold text-[11px] uppercase text-primary">Episode {item.episode_no}</Text>
-                    <Text className="mt-1 font-beBold text-base leading-6 text-[#261F1A]" numberOfLines={2}>{item.title}</Text>
-                    <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]" numberOfLines={2}>{item.description}</Text>
-                  </View>
-                  <View className="flex-row items-center justify-between">
+                <View className="flex-row">
+                  <Image source={imageFromUrl(null, index)} resizeMode="cover" style={styles.rowImage} />
+                  <View className="ml-3 flex-1 justify-between py-1">
+                    <View>
+                      <Text className="font-beBold text-[11px] uppercase text-primary">Episode {item.episode_no}</Text>
+                      <Text className="mt-1 font-beBold text-base leading-6 text-[#261F1A]" numberOfLines={2}>{item.title}</Text>
+                      <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]" numberOfLines={2}>{item.description}</Text>
+                    </View>
                     <Text className="font-beMedium text-xs text-[#B7842D]">{formatDate(item.air_date)} - {item.familyCount} families</Text>
-                    <Ionicons name="chevron-forward" size={17} color={palette.primary} />
                   </View>
                 </View>
-              </Pressable>
+
+                <View className="mt-3 border-t border-[#EFE6DD] pt-3">
+                  {item.families.length ? (
+                    item.families.map((family) => (
+                      <Pressable
+                        key={family.caseId}
+                        onPress={() => router.push(`/family/${family.caseId}`)}
+                        className="mb-2 flex-row items-center rounded-2xl bg-[#FAF7F2] px-3 py-2"
+                      >
+                        <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-white">
+                          <Ionicons name="heart-outline" size={15} color={palette.primary} />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="font-beSemiBold text-sm text-[#261F1A]" numberOfLines={1}>{family.name}</Text>
+                          <Text className="mt-0.5 font-beRegular text-xs leading-4 text-[#756B63]" numberOfLines={2}>{family.description}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={palette.primary} />
+                      </Pressable>
+                    ))
+                  ) : (
+                    <View className="rounded-2xl bg-[#FAF7F2] px-3 py-3">
+                      <Text className="font-beMedium text-xs text-[#756B63]">Family details are not available yet.</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
             ))}
           </View>
         </View>

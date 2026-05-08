@@ -69,6 +69,18 @@ def parse_datetime(value):
     )
 
 
+def date_to_datetime(value):
+    if not value:
+        return None
+
+    return datetime(
+        value.year,
+        value.month,
+        value.day,
+        tzinfo=timezone.utc,
+    )
+
+
 def extract_episode_no(value):
     value = clean_text(value)
 
@@ -106,6 +118,34 @@ def infer_children_count(story: Optional[str]):
         return None
 
     return max(int(match) for match in matches)
+
+
+def extract_case_names_from_episode_description(description: Optional[str]):
+    description = clean_text(description)
+
+    if not description:
+        return []
+
+    patterns = [
+        r"help\s+3\s+(?:situations|people in difficult situations|disadvantaged children|people in need|circumstances)[:,]?\s*(?:namely\s*)?(.+?)(?:,\s*bringing|\s+bringing|\.|$)",
+        r"support\s+3\s+(?:situations|people|children)[:,]?\s*(?:namely\s*)?(.+?)(?:,\s*bringing|\s+bringing|\.|$)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, description, flags=re.IGNORECASE)
+
+        if not match:
+            continue
+
+        raw_names = match.group(1)
+        raw_names = re.sub(r"\s+and\s+", ", ", raw_names, flags=re.IGNORECASE)
+        names = [name.strip(" ,.-") for name in raw_names.split(",")]
+        names = [name for name in names if len(name.split()) >= 2]
+
+        if names:
+            return names[:3]
+
+    return []
 
 
 def get_value(row, *names):
@@ -205,8 +245,8 @@ def import_cases(session: Session, episode_map):
     print("EPISODE MAP KEYS:", list(episode_map.keys())[:10])
 
     inserted_count = 0
+    updated_count = 0
     skipped_no_episode = 0
-    skipped_duplicate = 0
 
     for _, row in df.iterrows():
         episode_no = extract_episode_no(
@@ -228,6 +268,13 @@ def import_cases(session: Session, episode_map):
         if not title:
             continue
 
+        short_description = clean_text(get_value(row, "Short Description", "short_description"))
+        story = clean_text(get_value(row, "Full Story", "story"))
+        verified_at = parse_datetime(get_value(row, "air_date", "Air Date", "Date Posted"))
+        bank_name = clean_text(get_value(row, "Bank Name", "bank_name"))
+        account_number = clean_text(get_value(row, "Account Number", "account_number"))
+        account_name = clean_text(get_value(row, "Account Name", "account_name"))
+
         existing_case = session.exec(
             select(Case).where(
                 Case.title == title,
@@ -236,62 +283,122 @@ def import_cases(session: Session, episode_map):
         ).first()
 
         if existing_case:
-            skipped_duplicate += 1
-            continue
+            case = existing_case
+            updated_count += 1
+        else:
+            case = Case(
+                episode_id=episode_id,
+                title=title,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            inserted_count += 1
 
-        short_description = clean_text(get_value(row, "Short Description", "short_description"))
-        story = clean_text(get_value(row, "Full Story", "story"))
-        verified_at = parse_datetime(get_value(row, "air_date", "Air Date", "Date Posted"))
+        case.short_description = short_description
+        case.story = story
+        case.location_text = clean_text(get_value(row, "Location", "location_text"))
+        case.status = "ACTIVE"
+        case.thumbnail_url = clean_text(get_value(row, "Image URL", "Thumbnail URL", "thumbnail_url"))
+        case.priority_level = clean_text(get_value(row, "Priority Level", "priority_level")) or "HIGH"
+        case.support_category = clean_text(get_value(row, "Support Category", "support_category")) or infer_support_category(story)
+        case.support_focus = clean_text(get_value(row, "Support Focus", "support_focus")) or short_description
+        case.children_count = infer_children_count(story)
+        case.estimated_monthly_need = clean_text(get_value(row, "Estimated Monthly Need", "estimated_monthly_need"))
+        case.verification_status = clean_text(get_value(row, "Verification Status", "verification_status")) or "VERIFIED"
+        case.verified_at = verified_at
+        case.updated_at = datetime.now(timezone.utc)
 
-        new_case = Case(
-            episode_id=episode_id,
-            title=title,
-            short_description=short_description,
-            story=story,
-            location_text=clean_text(get_value(row, "Location", "location_text")),
-            status="ACTIVE",
-            thumbnail_url=clean_text(get_value(row, "Image URL", "Thumbnail URL", "thumbnail_url")),
-            priority_level=clean_text(get_value(row, "Priority Level", "priority_level")) or "HIGH",
-            support_category=clean_text(get_value(row, "Support Category", "support_category")) or infer_support_category(story),
-            support_focus=clean_text(get_value(row, "Support Focus", "support_focus")) or short_description,
-            children_count=infer_children_count(story),
-            estimated_monthly_need=clean_text(get_value(row, "Estimated Monthly Need", "estimated_monthly_need")),
-            verification_status=clean_text(get_value(row, "Verification Status", "verification_status")) or "VERIFIED",
-            verified_at=verified_at,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-        )
-
-        session.add(new_case)
+        session.add(case)
         session.commit()
-        session.refresh(new_case)
+        session.refresh(case)
 
-        family = Family(
-            case_id=new_case.id,
-            family_name=title,
-            summary=short_description,
-            display_name=clean_text(get_value(row, "Display Name", "display_name")) or title,
-            contact_note=clean_text(get_value(row, "Contact Note", "contact_note")),
-            bank_name=clean_text(get_value(row, "Bank Name", "bank_name")),
-            account_number=clean_text(get_value(row, "Account Number", "account_number")),
-            account_name=clean_text(get_value(row, "Account Name", "account_name")),
-            bank_verified=bool(
-                clean_text(get_value(row, "Bank Name", "bank_name"))
-                and clean_text(get_value(row, "Account Number", "account_number"))
-                and clean_text(get_value(row, "Account Name", "account_name"))
-            ),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-        )
+        family = session.exec(
+            select(Family).where(Family.case_id == case.id)
+        ).first()
+
+        if not family:
+            family = Family(
+                case_id=case.id,
+                family_name=title,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+
+        family.family_name = title
+        family.summary = short_description
+        family.display_name = clean_text(get_value(row, "Display Name", "display_name")) or title
+        family.contact_note = clean_text(get_value(row, "Contact Note", "contact_note"))
+        family.bank_name = bank_name
+        family.account_number = account_number
+        family.account_name = account_name
+        family.bank_verified = bool(bank_name and account_number and account_name)
+        family.updated_at = datetime.now(timezone.utc)
 
         session.add(family)
         session.commit()
 
-        inserted_count += 1
-
     print(f"New cases inserted: {inserted_count}")
+    print(f"Existing cases updated: {updated_count}")
     print(f"Skipped cases without matching episode: {skipped_no_episode}")
-    print(f"Skipped duplicate cases: {skipped_duplicate}")
+
+
+def import_basic_cases_from_episode_descriptions(session: Session):
+    episodes = session.exec(select(Episode)).all()
+    inserted_count = 0
+    skipped_count = 0
+
+    for episode in episodes:
+        existing_count = len(session.exec(
+            select(Case).where(Case.episode_id == episode.id)
+        ).all())
+
+        if existing_count > 0:
+            skipped_count += 1
+            continue
+
+        names = extract_case_names_from_episode_description(episode.description)
+
+        if not names:
+            skipped_count += 1
+            continue
+
+        for name in names:
+            case = Case(
+                episode_id=episode.id,
+                title=name,
+                short_description=episode.description,
+                story=episode.description,
+                location_text="Vietnam",
+                status="ACTIVE",
+                priority_level="MEDIUM",
+                support_category="Family support",
+                support_focus=episode.description,
+                verification_status="BASIC_PROFILE",
+                verified_at=date_to_datetime(episode.air_date),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+
+            session.add(case)
+            session.commit()
+            session.refresh(case)
+
+            family = Family(
+                case_id=case.id,
+                family_name=name,
+                summary=episode.description,
+                display_name=name,
+                bank_verified=False,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+
+            session.add(family)
+            session.commit()
+            inserted_count += 1
+
+    print(f"Basic episode cases inserted: {inserted_count}")
+    print(f"Episodes skipped for basic cases: {skipped_count}")
 
 
 def map_news_type(category):
@@ -348,6 +455,7 @@ def run():
     with Session(engine) as session:
         episode_map = import_episodes(session)
         import_cases(session, episode_map)
+        import_basic_cases_from_episode_descriptions(session)
         import_news(session)
 
     print("DONE IMPORT")

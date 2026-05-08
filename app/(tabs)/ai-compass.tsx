@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -12,14 +13,21 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FormattedContent } from '@/components/ui/formatted-content';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { palette } from '@/constants/design';
-import { askBackendChatbot } from '@/data/backend';
+import {
+  askBackendChatbot,
+  combineFamilyStories,
+  getBackendCases,
+  getBackendEpisodes,
+  getBackendFamilies,
+} from '@/data/backend';
 import { quickSuggestions } from '@/data/mock';
 
 type Message = {
   id: string;
-  role: 'assistant' | 'user';
+  role: 'assistant' | 'user' | 'typing';
   text: string;
   familyId?: string;
 };
@@ -28,15 +36,68 @@ const starterMessages: Message[] = [
   {
     id: 'm1',
     role: 'assistant',
-    text: 'Xin chao. Ban co the hoi ve ten gia dinh, dia phuong, tap phat song hoac thong tin chuyen khoan. Minh se tim trong du lieu backend va tra loi cho ban.',
+    text: 'Hello. Ask me about a family name, location, episode, or donation details. I will search the backend data and help you find the right profile.',
   },
 ];
+
+async function findRelatedFamilyId(text: string) {
+  const [episodes, cases, families] = await Promise.all([
+    getBackendEpisodes(),
+    getBackendCases(),
+    getBackendFamilies(),
+  ]);
+  const stories = combineFamilyStories(cases, families, episodes);
+  const normalized = text.toLowerCase();
+
+  const exactNameMatch = stories.find((story) => normalized.includes(story.name.toLowerCase()));
+  if (exactNameMatch) {
+    return exactNameMatch.caseId;
+  }
+
+  const locationMatch = stories.find((story) => normalized.includes(story.location.toLowerCase()));
+  if (locationMatch) {
+    return locationMatch.caseId;
+  }
+
+  const episodeMatch = stories.find((story) => normalized.includes(`episode ${story.episodeNo}`) || normalized.includes(`tap ${story.episodeNo}`));
+  return episodeMatch?.caseId;
+}
 
 export default function AICompassScreen() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>(starterMessages);
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<Message>>(null);
+  const dotAnimations = useRef([new Animated.Value(0.35), new Animated.Value(0.35), new Animated.Value(0.35)]).current;
+
+  useEffect(() => {
+    const animations = dotAnimations.map((dot, index) =>
+      Animated.sequence([
+        Animated.delay(index * 140),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(dot, {
+              toValue: 1,
+              duration: 360,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot, {
+              toValue: 0.35,
+              duration: 360,
+              useNativeDriver: true,
+            }),
+          ]),
+        ),
+      ]),
+    );
+
+    const group = Animated.parallel(animations);
+    group.start();
+
+    return () => {
+      group.stop();
+    };
+  }, [dotAnimations]);
 
   const scrollToEnd = () => {
     requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
@@ -49,33 +110,33 @@ export default function AICompassScreen() {
     }
 
     const userMessage: Message = { id: `${Date.now()}-user`, role: 'user', text };
+    const typingMessage: Message = { id: `${Date.now()}-typing`, role: 'typing', text: '' };
 
-    setMessages((current) => [...current, userMessage]);
+    setMessages((current) => [...current, userMessage, typingMessage]);
     setInput('');
     setSending(true);
     scrollToEnd();
 
     try {
       const response = await askBackendChatbot(text);
-      const suffix = typeof response.context_used === 'number' ? `\n\nContext used: ${response.context_used}` : '';
-      setMessages((current) => [
-        ...current,
-        {
+      const familyId = await findRelatedFamilyId(`${text}\n${response.reply}`);
+      setMessages((current) => current
+        .filter((message) => message.role !== 'typing')
+        .concat({
           id: `${Date.now()}-assistant`,
           role: 'assistant',
-          text: `${response.reply}${suffix}`,
-        },
-      ]);
+          text: response.reply,
+          familyId,
+        }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to reach chatbot backend.';
-      setMessages((current) => [
-        ...current,
-        {
+      setMessages((current) => current
+        .filter((item) => item.role !== 'typing')
+        .concat({
           id: `${Date.now()}-assistant-error`,
           role: 'assistant',
           text: `Minh chua goi duoc chatbot backend. Chi tiet loi: ${message}`,
-        },
-      ]);
+        }));
     } finally {
       setSending(false);
       scrollToEnd();
@@ -120,12 +181,49 @@ export default function AICompassScreen() {
           }
           renderItem={({ item }) => (
             <View style={styles.page}>
-              <View className={`mb-3 ${item.role === 'assistant' ? 'items-start' : 'items-end'}`}>
-                <View className={`max-w-[88%] rounded-[24px] px-4 py-3 ${item.role === 'assistant' ? 'bg-white' : 'bg-primary'}`} style={styles.messageCard}>
-                  <Text className={`font-beRegular text-sm leading-6 ${item.role === 'assistant' ? 'text-[#261F1A]' : 'text-white'}`}>{item.text}</Text>
+              <View className={`mb-3 ${item.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <View className={`max-w-[88%] rounded-[24px] px-4 py-3 ${item.role === 'user' ? 'bg-primary' : 'bg-white'}`} style={styles.messageCard}>
+                  {item.role === 'assistant' ? (
+                    <View className="mb-3 flex-row items-center">
+                      <View className="mr-2 h-7 w-7 items-center justify-center rounded-full bg-[#F3EAE1]">
+                        <Ionicons name="sparkles" size={14} color={palette.primary} />
+                      </View>
+                      <Text className="font-beBold text-[11px] uppercase text-primary">Mai Am Assistant</Text>
+                    </View>
+                  ) : null}
+                  {item.role === 'typing' ? (
+                    <View className="flex-row items-center gap-1 py-1">
+                      {dotAnimations.map((dot, index) => (
+                        <Animated.View
+                          key={`typing-dot-${index}`}
+                          style={[
+                            styles.typingDot,
+                            {
+                              opacity: dot,
+                              transform: [
+                                {
+                                  translateY: dot.interpolate({
+                                    inputRange: [0.35, 1],
+                                    outputRange: [2, -2],
+                                  }),
+                                },
+                              ],
+                            },
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  ) : item.role === 'assistant' ? (
+                    <View className="border-l-2 border-[#E7DED4] pl-3">
+                      <FormattedContent text={item.text} emptyText="No response." />
+                    </View>
+                  ) : (
+                    <Text className={`font-beRegular text-sm leading-6 ${item.role === 'user' ? 'text-white' : 'text-[#261F1A]'}`}>{item.text}</Text>
+                  )}
                   {item.familyId ? (
-                    <Pressable onPress={() => router.push(`/family/${item.familyId}`)} className="mt-3 self-start rounded-full bg-[#F3EAE1] px-3 py-2">
-                      <Text className="font-beSemiBold text-xs text-primary">Open profile</Text>
+                    <Pressable onPress={() => router.push(`/family/${item.familyId}`)} className="mt-4 flex-row items-center self-start rounded-full bg-[#F3EAE1] px-3 py-2">
+                      <Ionicons name="person-circle-outline" size={15} color={palette.primary} />
+                      <Text className="ml-1.5 font-beSemiBold text-xs text-primary">Open profile</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -179,5 +277,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
     maxWidth: 430,
+  },
+  typingDot: {
+    backgroundColor: palette.primary,
+    borderRadius: 4,
+    height: 8,
+    width: 8,
   },
 });

@@ -1,4 +1,5 @@
 import os
+import time
 from typing import List
 
 import psycopg
@@ -16,6 +17,9 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 EMBEDDING_MODEL = "gemini-embedding-001"
 CHAT_MODEL = "models/gemini-flash-lite-latest"
 EMBEDDING_DIMENSION = 768
+CHAT_MATCH_COUNT = 3
+MAX_CONTEXT_CHARS_PER_DOC = 900
+MAX_OUTPUT_TOKENS = 320
 
 
 def normalize_db_url(url: str) -> str:
@@ -70,6 +74,25 @@ def retrieve_documents(query_embedding: List[float], match_count: int = 5):
     return documents
 
 
+def trim_text(text: str, max_chars: int) -> str:
+    text = " ".join((text or "").split())
+
+    if len(text) <= max_chars:
+        return text
+
+    return f"{text[:max_chars].rstrip()}..."
+
+
+def build_context(documents) -> str:
+    context_blocks = []
+
+    for index, doc in enumerate(documents, start=1):
+        content = trim_text(doc["content"], MAX_CONTEXT_CHARS_PER_DOC)
+        context_blocks.append(f"[Document {index}]\n{content}")
+
+    return "\n\n---\n\n".join(context_blocks)
+
+
 def generate_answer(user_question: str, context: str) -> str:
     sys_instruct = """You are a warm, empathetic virtual assistant for the charity program "Mai Am Gia Dinh Viet".
 
@@ -82,6 +105,7 @@ You MUST reply in the EXACT SAME LANGUAGE as the User's Question.
 - Answer ONLY based on the provided context. Do not invent facts.
 - Speak naturally like a caring human volunteer. Jump straight into the story.
 - DO NOT use robotic greetings (e.g., avoid "Here is the information...").
+- Keep the answer concise, around 2-5 short sentences unless the user asks for details.
 - If asked about donations, provide the exact bank details from the context."""
 
     prompt = f"""[CONTEXT]
@@ -96,6 +120,7 @@ You MUST reply in the EXACT SAME LANGUAGE as the User's Question.
         config=types.GenerateContentConfig(
             system_instruction=sys_instruct,
             temperature=0.2,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
         ),
     )
 
@@ -118,13 +143,16 @@ def chatbot_health_check():
 @router.post("/", response_model=ChatResponse)
 def chat_with_bot(payload: ChatRequest):
     try:
+        started_at = time.perf_counter()
         user_question = payload.message.strip()
 
         if not user_question:
             raise HTTPException(status_code=400, detail="Message is required")
 
         query_embedding = embed_query(user_question)
-        documents = retrieve_documents(query_embedding, match_count=5)
+        embedded_at = time.perf_counter()
+        documents = retrieve_documents(query_embedding, match_count=CHAT_MATCH_COUNT)
+        retrieved_at = time.perf_counter()
 
         if not documents:
             return ChatResponse(
@@ -132,12 +160,19 @@ def chat_with_bot(payload: ChatRequest):
                 context_used=0,
             )
 
-        context = "\n\n---\n\n".join(
-            [doc["content"] for doc in documents]
-        )
+        context = build_context(documents)
 
         try:
             answer = generate_answer(user_question, context)
+            answered_at = time.perf_counter()
+            print(
+                "chatbot timing "
+                f"embed={embedded_at - started_at:.2f}s "
+                f"retrieve={retrieved_at - embedded_at:.2f}s "
+                f"generate={answered_at - retrieved_at:.2f}s "
+                f"total={answered_at - started_at:.2f}s "
+                f"context_chars={len(context)}"
+            )
         except Exception as e:
             if is_temporary_model_error(e):
                 return ChatResponse(
