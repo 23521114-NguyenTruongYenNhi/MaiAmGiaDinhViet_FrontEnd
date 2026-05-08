@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { palette } from '@/constants/design';
 
 const items = [
-  { label: 'Families', caption: 'Verified support profiles', icon: 'people', route: '/(tabs)/my-impact' as const },
+  { label: 'Families', caption: 'Verified support profiles', icon: 'people', route: '/(tabs)/families' as const },
   { label: 'Ask & Find', caption: 'Search families and episodes', icon: 'chatbubbles', route: '/(tabs)/ai-compass' as const },
   { label: 'Episodes', caption: 'Program stories', icon: 'play-circle', route: '/(tabs)/episodes' as const },
   { label: 'News', caption: 'Latest updates', icon: 'newspaper', route: '/(tabs)/news' as const },

@@ -57,7 +57,7 @@ export default function AdminScreen() {
   const [enabledRoles, setEnabledRoles] = useState<string[]>(['owner', 'verifier']);
   const [statusNote, setStatusNote] = useState('Ready');
 
-  const urgentCount = families.filter((family) => family.urgency === 'High').length;
+  const activeCount = families.filter((family) => family.status === 'ACTIVE').length;
   const active = modules.find((module) => module.key === activeModule) ?? modules[0];
 
   const rows: AdminRow[] = useMemo(() => {
@@ -67,8 +67,8 @@ export default function AdminScreen() {
         return {
           id: family.id,
           title: family.name,
-          meta: `${family.location} - ${family.urgency} priority`,
-          value: done ? 'Approved' : family.urgency,
+          meta: `${family.location} - Episode ${family.episodeNo}`,
+          value: done ? 'Approved' : family.status,
           action: done ? 'Undo' : 'Approve',
           done,
         };
@@ -82,7 +82,7 @@ export default function AdminScreen() {
           id: family.id,
           title: family.beneficiary,
           meta: `${family.bank} - ${family.accountNumber}`,
-          value: done ? 'Verified' : family.lastVerified,
+          value: done ? 'Verified' : family.bank,
           action: done ? 'Recheck' : 'Verify',
           done,
         };
@@ -192,8 +192,8 @@ export default function AdminScreen() {
               <Text className="mt-1 font-beMedium text-xs text-[#756B63]">families</Text>
             </View>
             <View className="mr-3 flex-1 rounded-[22px] bg-white p-4" style={styles.metric}>
-              <Text className="font-beBold text-2xl text-primary">{urgentCount}</Text>
-              <Text className="mt-1 font-beMedium text-xs text-[#756B63]">priority</Text>
+              <Text className="font-beBold text-2xl text-primary">{activeCount}</Text>
+              <Text className="mt-1 font-beMedium text-xs text-[#756B63]">active</Text>
             </View>
             <View className="flex-1 rounded-[22px] bg-white p-4" style={styles.metric}>
               <Text className="font-beBold text-2xl text-primary">{publishedItems.length}</Text>

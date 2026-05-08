@@ -153,7 +153,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="my-impact"
+          name="families"
           options={{
             title: 'Families',
             tabBarIcon: ({ color }) => <Ionicons size={22} name="people" color={color} />,
@@ -273,8 +273,8 @@ const styles = StyleSheet.create({
     borderColor: '#EFE6DD',
     borderRadius: 18,
     borderWidth: 1,
-    bottom: 58,
-    left: 48,
+    bottom: 48,
+    left: 74,
     width: 236,
     paddingHorizontal: 13,
     paddingVertical: 10,

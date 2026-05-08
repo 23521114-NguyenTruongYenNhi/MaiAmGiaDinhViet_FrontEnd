@@ -1,0 +1,18 @@
+# Environments
+.venv/
+env/
+venv/
+
+# Password and secret files
+.env
+
+# Cache of Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Uv cache
+.uv/
+
+# IDE (PyCharm)
+.idea/

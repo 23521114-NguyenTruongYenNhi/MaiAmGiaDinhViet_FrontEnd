@@ -14,7 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { palette } from '@/constants/design';
-import { families, quickSuggestions } from '@/data/mock';
+import { askBackendChatbot } from '@/data/backend';
+import { quickSuggestions } from '@/data/mock';
 
 type Message = {
   id: string;
@@ -27,76 +28,58 @@ const starterMessages: Message[] = [
   {
     id: 'm1',
     role: 'assistant',
-    text: 'Hello. Tell me what you know, such as a family name, location, episode, or donation question. I will help you find the right information.',
+    text: 'Xin chao. Ban co the hoi ve ten gia dinh, dia phuong, tap phat song hoac thong tin chuyen khoan. Minh se tim trong du lieu backend va tra loi cho ban.',
   },
 ];
-
-function createReply(question: string): Message {
-  const normalized = question.toLowerCase();
-  const urgent = families.find((family) => family.urgency === 'High') ?? families[0];
-  const quangNam = families.find((family) => family.location === 'Quang Nam') ?? families[0];
-
-  if (normalized.includes('urgent')) {
-    return {
-      id: `${Date.now()}-assistant`,
-      role: 'assistant',
-      text: `${urgent.name} is currently the strongest urgent match. The profile is verified, located in ${urgent.location}, and focused on ${urgent.supportFocus.toLowerCase()}.`,
-      familyId: urgent.id,
-    };
-  }
-
-  if (normalized.includes('bank') || normalized.includes('account')) {
-    return {
-      id: `${Date.now()}-assistant`,
-      role: 'assistant',
-      text: 'Every family profile includes bank name, account holder, account number, and verification date. Open a profile to copy payment details in one tap.',
-      familyId: families[0].id,
-    };
-  }
-
-  if (normalized.includes('quang nam')) {
-    return {
-      id: `${Date.now()}-assistant`,
-      role: 'assistant',
-      text: `${quangNam.name} is the family currently listed in Quang Nam. The current monthly need is ${quangNam.monthlyNeed}.`,
-      familyId: quangNam.id,
-    };
-  }
-
-  if (normalized.includes('update') || normalized.includes('news')) {
-    return {
-      id: `${Date.now()}-assistant`,
-      role: 'assistant',
-      text: 'You can review verification notes and program changes in News & Updates. Each item opens a focused detail view.',
-    };
-  }
-
-  return {
-    id: `${Date.now()}-assistant`,
-    role: 'assistant',
-    text: 'I can help you find families by urgency, location, or support focus. Try asking about urgent families, Quang Nam, or payment details.',
-  };
-}
 
 export default function AICompassScreen() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>(starterMessages);
+  const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<Message>>(null);
 
-  const send = (preset?: string) => {
+  const scrollToEnd = () => {
+    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+  };
+
+  const send = async (preset?: string) => {
     const text = (preset ?? input).trim();
-    if (!text) {
+    if (!text || sending) {
       return;
     }
 
-    const nextMessages: Message[] = [
-      { id: `${Date.now()}-user`, role: 'user', text },
-      createReply(text),
-    ];
+    const userMessage: Message = { id: `${Date.now()}-user`, role: 'user', text };
 
-    setMessages((current) => [...current, ...nextMessages]);
+    setMessages((current) => [...current, userMessage]);
     setInput('');
-    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+    setSending(true);
+    scrollToEnd();
+
+    try {
+      const response = await askBackendChatbot(text);
+      const suffix = typeof response.context_used === 'number' ? `\n\nContext used: ${response.context_used}` : '';
+      setMessages((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          text: `${response.reply}${suffix}`,
+        },
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to reach chatbot backend.';
+      setMessages((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-assistant-error`,
+          role: 'assistant',
+          text: `Minh chua goi duoc chatbot backend. Chi tiet loi: ${message}`,
+        },
+      ]);
+    } finally {
+      setSending(false);
+      scrollToEnd();
+    }
   };
 
   return (
@@ -113,11 +96,11 @@ export default function AICompassScreen() {
               <ScreenHeader
                 title="Ask & Find"
                 icon="chatbubbles"
-                meta="Smart search"
+                meta="Gemini backend"
                 trailing={
                   <View className="flex-row items-center rounded-full bg-white px-3 py-2">
-                    <View className="mr-2 h-2.5 w-2.5 rounded-full bg-[#1F8B4C]" />
-                    <Text className="font-beSemiBold text-xs text-[#261F1A]">AI online</Text>
+                    <View className={`mr-2 h-2.5 w-2.5 rounded-full ${sending ? 'bg-[#B7842D]' : 'bg-[#1F8B4C]'}`} />
+                    <Text className="font-beSemiBold text-xs text-[#261F1A]">{sending ? 'Thinking' : 'AI online'}</Text>
                   </View>
                 }
               />
@@ -162,7 +145,7 @@ export default function AICompassScreen() {
                 placeholderTextColor="#9E978F"
                 textAlignVertical="center"
               />
-              <Pressable onPress={() => send()} className="h-11 w-11 items-center justify-center rounded-full bg-primary">
+              <Pressable onPress={() => send()} disabled={sending} className={`h-11 w-11 items-center justify-center rounded-full ${sending ? 'bg-[#C9B8A7]' : 'bg-primary'}`}>
                 <Ionicons name="arrow-up" size={18} color={palette.white} />
               </Pressable>
             </View>

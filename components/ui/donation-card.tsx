@@ -5,7 +5,7 @@ import { palette, radii } from '@/constants/design';
 
 type Props = {
   title: string;
-  description: string;
+  description?: string;
   image: ImageSourcePropType;
   onPress?: () => void;
 };
@@ -27,7 +27,9 @@ function DonationCardComponent({ title, description, image, onPress }: Props) {
     >
       <Image source={image} className="h-40 w-full" style={{ borderRadius: radii.card }} />
       <Text className="mt-3 font-beSemiBold text-lg text-[#2B2B2B]">{title}</Text>
-      <Text className="mt-1 font-beRegular text-sm leading-6 text-[#786F68]">{description}</Text>
+      {description ? (
+        <Text className="mt-1 font-beRegular text-sm leading-6 text-[#786F68]" numberOfLines={2}>{description}</Text>
+      ) : null}
       <CustomButton label="View details" onPress={onPress} className="mt-3" />
     </View>
   );

@@ -132,7 +132,7 @@ export default function SettingsScreen() {
                 </View>
                 <View className="ml-3 flex-1">
                   <Text className="font-beSemiBold text-base text-[#261F1A]">{family.name}</Text>
-                  <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">{family.location} - {family.supportFocus}</Text>
+                  <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">{family.location} - Episode {family.episodeNo}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={palette.primary} />
               </Pressable>
@@ -156,7 +156,7 @@ export default function SettingsScreen() {
                 </View>
                 <View className="ml-3 flex-1">
                   <Text className="font-beSemiBold text-base text-[#261F1A]" numberOfLines={1}>{episode.title}</Text>
-                  <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">{episode.host} - {episode.duration}</Text>
+                  <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">{episode.airDate} - Episode {episode.episodeNo}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={palette.primary} />
               </Pressable>

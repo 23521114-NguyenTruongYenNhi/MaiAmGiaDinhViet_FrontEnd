@@ -9,7 +9,7 @@ const alerts = [
   {
     id: 'family',
     title: `${families[0].name} verified`,
-    caption: families[0].lastVerified,
+    caption: `${families[0].episodeTitle} - ${families[0].location}`,
     icon: 'shield-checkmark',
     route: `/family/${families[0].id}`,
   },

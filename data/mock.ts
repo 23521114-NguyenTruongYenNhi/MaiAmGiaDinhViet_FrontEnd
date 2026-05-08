@@ -20,7 +20,12 @@ export type NewsItem = {
 
 export type Episode = {
   id: string;
+  episodeNo: number;
   title: string;
+  description: string;
+  airDate: string;
+  videoUrl: string;
+  isFeatured: boolean;
   duration: string;
   thumbnail: ImageSourcePropType;
   host: string;
@@ -29,19 +34,20 @@ export type Episode = {
 
 export type Family = {
   id: string;
+  caseId: string;
+  episodeId: string;
+  episodeNo: number;
+  episodeTitle: string;
+  episodeDate: string;
   name: string;
   description: string;
+  story: string;
   image: ImageSourcePropType;
-  progress: number;
   bank: string;
   beneficiary: string;
   accountNumber: string;
   location: string;
-  urgency: 'High' | 'Medium';
-  childrenCount: number;
-  monthlyNeed: string;
-  supportFocus: string;
-  lastVerified: string;
+  status: 'ACTIVE' | 'ARCHIVED';
 };
 
 const heroImage = require('../assets/images/maiam-episode-hero.jpg');
@@ -110,7 +116,12 @@ export const quickSuggestions = [
 export const episodes: Episode[] = [
   {
     id: 'ep-1',
-    title: 'A family rebuilding stability and hope',
+    episodeNo: 184,
+    title: 'Mai Am Gia Dinh Viet - Episode 184',
+    description: 'A broadcast story following families in difficult circumstances and the support journey created through the program.',
+    airDate: 'May 1, 2026',
+    videoUrl: 'https://youtu.be/',
+    isFeatured: true,
     duration: '45:00',
     thumbnail: heroImage,
     host: 'Featured episode',
@@ -118,7 +129,12 @@ export const episodes: Episode[] = [
   },
   {
     id: 'ep-2',
-    title: 'Field visits that turn care into action',
+    episodeNo: 183,
+    title: 'Mai Am Gia Dinh Viet - Episode 183',
+    description: 'MC and guests join the program to support families through challenges and community giving.',
+    airDate: 'April 24, 2026',
+    videoUrl: 'https://youtu.be/nx7_UYVzRGo',
+    isFeatured: false,
     duration: '42:30',
     thumbnail: familyImage2,
     host: 'Latest release',
@@ -126,7 +142,12 @@ export const episodes: Episode[] = [
   },
   {
     id: 'ep-3',
-    title: 'The story behind each support milestone',
+    episodeNo: 182,
+    title: 'Mai Am Gia Dinh Viet - Episode 182',
+    description: 'A recent episode featuring multiple families and the support they received through the program.',
+    airDate: 'April 17, 2026',
+    videoUrl: 'https://youtu.be/Wh6SZ2EQT2Y',
+    isFeatured: false,
     duration: '40:15',
     thumbnail: familyImage3,
     host: 'Community pick',
@@ -137,50 +158,53 @@ export const episodes: Episode[] = [
 export const families: Family[] = [
   {
     id: 'fam-1',
-    name: 'Ngoc Family',
-    description: 'The family needs support for school expenses, daily essentials, and safer housing conditions for two children.',
+    caseId: 'case-1',
+    episodeId: 'ep-1',
+    episodeNo: 184,
+    episodeTitle: 'Mai Am Gia Dinh Viet - Episode 184',
+    episodeDate: 'May 1, 2026',
+    name: 'Pham Thi Truc Phuong',
+    description: 'A student in Khanh Hoa whose family has faced repeated loss and continuing financial hardship.',
+    story: 'Pham Thi Truc Phuong is a student in Khanh Hoa. Her family has experienced major losses after her father and older brother passed away, leaving the household in a difficult emotional and financial situation.',
     image: familyImage1,
-    progress: 64,
     bank: 'Vietcombank',
-    beneficiary: 'Nguyen Thi L.',
+    beneficiary: 'Pham Thi Truc Phuong',
     accountNumber: '1029 4485 9920',
-    location: 'Quang Nam',
-    urgency: 'High',
-    childrenCount: 2,
-    monthlyNeed: '$220/month',
-    supportFocus: 'Education support and household stability',
-    lastVerified: 'Verified on May 3, 2026',
+    location: 'Khanh Hoa',
+    status: 'ACTIVE',
   },
   {
     id: 'fam-2',
-    name: 'Minh Family',
-    description: 'This household needs continued help with medical essentials while keeping the children in school.',
+    caseId: 'case-2',
+    episodeId: 'ep-2',
+    episodeNo: 183,
+    episodeTitle: 'Mai Am Gia Dinh Viet - Episode 183',
+    episodeDate: 'April 24, 2026',
+    name: 'Le Anh Ngoc Diem',
+    description: 'A family story featured in Episode 183, connected to the program support journey.',
+    story: 'Le Anh Ngoc Diem was featured in Episode 183. The program presents the family circumstances, location details, and verified support information for viewers who want to learn more or help.',
     image: familyImage2,
-    progress: 47,
     bank: 'BIDV',
-    beneficiary: 'Tran Van M.',
+    beneficiary: 'Le Anh Ngoc Diem',
     accountNumber: '6638 9921 0042',
-    location: 'Phu Yen',
-    urgency: 'Medium',
-    childrenCount: 3,
-    monthlyNeed: '$310/month',
-    supportFocus: 'Medical support and school continuity',
-    lastVerified: 'Verified on April 29, 2026',
+    location: 'Vietnam',
+    status: 'ACTIVE',
   },
   {
     id: 'fam-3',
-    name: 'Lan Family',
-    description: 'A single caregiver needs help with food, transportation, and consistent school attendance after recent hardship.',
+    caseId: 'case-3',
+    episodeId: 'ep-3',
+    episodeNo: 182,
+    episodeTitle: 'Mai Am Gia Dinh Viet - Episode 182',
+    episodeDate: 'April 17, 2026',
+    name: 'Tran Khai Minh',
+    description: 'A family story featured in Episode 182, with bank information available for direct support.',
+    story: 'Tran Khai Minh was featured in Episode 182. The profile keeps the broadcast story, location, and verified bank details together so viewers can review information clearly.',
     image: familyImage3,
-    progress: 31,
     bank: 'Agribank',
-    beneficiary: 'Pham Thi H.',
+    beneficiary: 'Tran Khai Minh',
     accountNumber: '8704 2201 5586',
-    location: 'Can Tho',
-    urgency: 'High',
-    childrenCount: 2,
-    monthlyNeed: '$260/month',
-    supportFocus: 'Food assistance and school transportation',
-    lastVerified: 'Verified on May 1, 2026',
+    location: 'Vietnam',
+    status: 'ACTIVE',
   },
 ];
