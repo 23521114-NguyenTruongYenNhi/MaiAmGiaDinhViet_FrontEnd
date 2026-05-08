@@ -1,12 +1,18 @@
 import { Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { palette } from '@/constants/design';
 import { CustomButton } from '@/components/ui/custom-button';
 import { InfoInput } from '@/components/ui/info-input';
+import { getBackendMe, loginBackend, loginWithGoogleBackend, registerBackend } from '@/data/backend';
+import { saveSession } from '@/data/session';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -16,6 +22,104 @@ export default function SignUpScreen() {
   const [dob, setDob] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || googleWebClientId;
+  const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || googleWebClientId;
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    webClientId: googleWebClientId,
+    iosClientId: googleIosClientId,
+    androidClientId: googleAndroidClientId,
+    scopes: ['openid', 'profile', 'email'],
+    selectAccount: true,
+  });
+
+  const handleSignUp = async () => {
+    const fullName = `${lastName.trim()} ${firstName.trim()}`.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!fullName || !normalizedEmail || !password) {
+      setErrorMessage('Please enter your name, email, and password.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage('');
+
+    try {
+      await registerBackend({
+        full_name: fullName,
+        email: normalizedEmail,
+        password,
+        phone_number: phone.trim() || undefined,
+      });
+      const token = await loginBackend(normalizedEmail, password);
+      const user = await getBackendMe(token.access_token);
+      await saveSession(token.access_token, user);
+      router.replace('/(tabs)');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('Email already registered')) {
+        setErrorMessage('This email is already registered. Please log in instead.');
+      } else if (message.includes('Failed to fetch') || message.includes('Network request failed')) {
+        setErrorMessage('Cannot reach the backend. Please check that the server is running.');
+      } else {
+        setErrorMessage('Sign up failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completeGoogleLogin = useCallback(async (idToken: string) => {
+    setGoogleLoading(true);
+    setErrorMessage('');
+
+    try {
+      const token = await loginWithGoogleBackend(idToken);
+      const user = await getBackendMe(token.access_token);
+      await saveSession(token.access_token, user);
+      router.replace('/(tabs)');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('Google client IDs')) {
+        setErrorMessage('Google Sign-In is not configured on the backend yet.');
+      } else {
+        setErrorMessage(`Google Sign-In failed: ${message || 'Please try again.'}`);
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const idToken = googleResponse.params.id_token;
+
+      if (!idToken) {
+        setErrorMessage('Google did not return an ID token.');
+        return;
+      }
+
+      void completeGoogleLogin(idToken);
+    }
+
+    if (googleResponse?.type === 'error') {
+      setErrorMessage(`Google authorization failed: ${JSON.stringify(googleResponse.params ?? {})}`);
+    }
+  }, [completeGoogleLogin, googleResponse]);
+
+  const handleGoogleLogin = async () => {
+    if (!googleWebClientId) {
+      setErrorMessage('Google Sign-In needs Google client IDs in the FE .env file.');
+      return;
+    }
+
+    setErrorMessage('');
+    await promptGoogleAsync();
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
@@ -54,7 +158,13 @@ export default function SignUpScreen() {
               <InfoInput label="Phone number" value={phone} onChangeText={setPhone} placeholder="(84) 123 456 789" labelClassName="text-white mb-1" />
               <InfoInput label="Set password" value={password} onChangeText={setPassword} placeholder="****************" secureTextEntry labelClassName="text-white mb-1" />
 
-              <CustomButton label="Sign Up" variant="secondary" onPress={() => router.replace('/(tabs)')} className="mt-6 w-[220px] self-center" />
+              {errorMessage ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              <CustomButton label={loading ? 'Creating account...' : 'Sign Up'} variant="secondary" onPress={loading ? undefined : handleSignUp} className="mt-6 w-[220px] self-center" />
 
               <View style={styles.dividerWrap}>
                 <View style={styles.dividerLine} />
@@ -62,9 +172,12 @@ export default function SignUpScreen() {
                 <View style={styles.dividerLine} />
               </View>
 
-              <Pressable style={styles.googleButton} onPress={() => router.replace('/(tabs)')}>
+              <Pressable
+                style={[styles.googleButton, (!googleRequest || googleLoading) && styles.disabledPress]}
+                onPress={(!googleRequest || googleLoading) ? undefined : handleGoogleLogin}
+              >
                 <Image source={require('../assets/images/google.jpg')} style={styles.googleBtnIcon} resizeMode="contain" />
-                <Text style={styles.googleBtnText}>Continue with Google</Text>
+                <Text style={styles.googleBtnText}>{googleLoading ? 'Signing in...' : 'Continue with Google'}</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -173,5 +286,23 @@ const styles = StyleSheet.create({
     color: '#2B2B2B',
     fontSize: 15,
     fontWeight: '600',
+  },
+  disabledPress: {
+    opacity: 0.6,
+  },
+  errorBox: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });

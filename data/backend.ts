@@ -66,6 +66,21 @@ export type BackendChatResponse = {
   context_used?: number;
 };
 
+export type BackendToken = {
+  access_token: string;
+  token_type: string;
+};
+
+export type BackendUser = {
+  id: string;
+  full_name: string;
+  email: string;
+  phone_number?: string | null;
+  role: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type FamilyStory = {
   id: string;
   caseId: string;
@@ -250,6 +265,51 @@ export async function askBackendChatbot(message: string) {
     const detail = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`${detail} | API: ${API_BASE_URL}/chatbot/`);
   }
+}
+
+export async function loginBackend(email: string, password: string) {
+  const body = new URLSearchParams();
+  body.append('username', email);
+  body.append('password', password);
+
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Login failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<BackendToken>;
+}
+
+export async function getBackendMe(token: string) {
+  return apiRequest<BackendUser>('/users/me', { token });
+}
+
+export async function loginWithGoogleBackend(idToken: string) {
+  return apiRequest<BackendToken>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ id_token: idToken }),
+  });
+}
+
+export async function registerBackend(payload: {
+  full_name: string;
+  email: string;
+  password: string;
+  phone_number?: string;
+}) {
+  return apiRequest<BackendUser>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getBackendCaseDetail(id: string) {

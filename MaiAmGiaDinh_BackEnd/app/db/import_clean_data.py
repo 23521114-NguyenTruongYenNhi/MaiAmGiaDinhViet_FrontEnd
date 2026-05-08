@@ -148,6 +148,31 @@ def extract_case_names_from_episode_description(description: Optional[str]):
     return []
 
 
+def build_basic_case_story(name: str, episode: Episode):
+    description = clean_text(episode.description) or f"{episode.title} featured this household."
+    air_date = episode.air_date.strftime("%B %d, %Y") if episode.air_date else "the broadcast date"
+
+    return (
+        f"{name} is one of the three households featured in {episode.title}, aired on {air_date}. "
+        "This is a basic profile created from the episode summary so donors can discover every family in the episode. "
+        f"The program segment notes: {description}"
+    )
+
+
+def build_basic_support_focus(name: str, episode: Episode):
+    return (
+        f"Community support for {name} after being featured in Episode {episode.episode_no}. "
+        "Detailed household needs and verified donation information will be updated when the full case profile is available."
+    )
+
+
+def build_basic_short_description(name: str, episode: Episode):
+    return (
+        f"{name} was featured in Episode {episode.episode_no} of Mai Am Gia Dinh Viet. "
+        "This profile is available for episode browsing while full case details are being completed."
+    )
+
+
 def get_value(row, *names):
     for name in names:
         if name in row.index:
@@ -345,14 +370,17 @@ def import_cases(session: Session, episode_map):
 def import_basic_cases_from_episode_descriptions(session: Session):
     episodes = session.exec(select(Episode)).all()
     inserted_count = 0
+    updated_count = 0
     skipped_count = 0
 
     for episode in episodes:
-        existing_count = len(session.exec(
+        existing_cases = session.exec(
             select(Case).where(Case.episode_id == episode.id)
-        ).all())
+        ).all()
 
-        if existing_count > 0:
+        has_detailed_cases = any(case.verification_status != "BASIC_PROFILE" for case in existing_cases)
+
+        if has_detailed_cases:
             skipped_count += 1
             continue
 
@@ -363,41 +391,63 @@ def import_basic_cases_from_episode_descriptions(session: Session):
             continue
 
         for name in names:
-            case = Case(
-                episode_id=episode.id,
-                title=name,
-                short_description=episode.description,
-                story=episode.description,
-                location_text="Vietnam",
-                status="ACTIVE",
-                priority_level="MEDIUM",
-                support_category="Family support",
-                support_focus=episode.description,
-                verification_status="BASIC_PROFILE",
-                verified_at=date_to_datetime(episode.air_date),
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
+            case = session.exec(
+                select(Case).where(
+                    Case.episode_id == episode.id,
+                    Case.title == name,
+                )
+            ).first()
+
+            if not case:
+                case = Case(
+                    episode_id=episode.id,
+                    title=name,
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                )
+                inserted_count += 1
+            else:
+                updated_count += 1
+
+            case.short_description = build_basic_short_description(name, episode)
+            case.story = build_basic_case_story(name, episode)
+            case.location_text = "Vietnam"
+            case.status = "ACTIVE"
+            case.priority_level = "MEDIUM"
+            case.support_category = "Family support"
+            case.support_focus = build_basic_support_focus(name, episode)
+            case.verification_status = "BASIC_PROFILE"
+            case.verified_at = date_to_datetime(episode.air_date)
+            case.updated_at = datetime.now(timezone.utc)
 
             session.add(case)
             session.commit()
             session.refresh(case)
 
-            family = Family(
-                case_id=case.id,
-                family_name=name,
-                summary=episode.description,
-                display_name=name,
-                bank_verified=False,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
+            family = session.exec(
+                select(Family).where(Family.case_id == case.id)
+            ).first()
+
+            if not family:
+                family = Family(
+                    case_id=case.id,
+                    family_name=name,
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                )
+
+            family.family_name = name
+            family.summary = build_basic_short_description(name, episode)
+            family.display_name = name
+            family.contact_note = "Basic profile from episode summary"
+            family.bank_verified = False
+            family.updated_at = datetime.now(timezone.utc)
 
             session.add(family)
             session.commit()
-            inserted_count += 1
 
     print(f"Basic episode cases inserted: {inserted_count}")
+    print(f"Basic episode cases updated: {updated_count}")
     print(f"Episodes skipped for basic cases: {skipped_count}")
 
 

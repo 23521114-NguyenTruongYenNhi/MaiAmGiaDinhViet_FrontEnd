@@ -11,6 +11,45 @@ import { combineFamilyStories, FamilyStory, formatDate, getBackendCases, getBack
 
 type Filter = 'All' | 'Latest' | 'Urgent' | 'Saved';
 
+type EpisodeFilter = {
+  episodeNo: number;
+  episodeTitle: string;
+  familyCount: number;
+  familyNames: string[];
+};
+
+function normalizeSearchText(value?: string | null) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchesSearchToken(story: FamilyStory, query: string) {
+  const searchable = normalizeSearchText([
+    story.name,
+    story.location,
+    story.description,
+    story.story,
+    story.episodeTitle,
+    `episode ${story.episodeNo}`,
+    `tap ${story.episodeNo}`,
+    story.supportCategory,
+    story.supportFocus,
+    story.bank,
+    story.beneficiary,
+    story.accountNumber,
+  ].filter(Boolean).join(' '));
+  const tokens = normalizeSearchText(query).split(' ').filter(Boolean);
+
+  return tokens.every((token) => searchable.includes(token));
+}
+
 export default function FamiliesScreen() {
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,24 +83,31 @@ export default function FamiliesScreen() {
   }, []);
 
   const episodeFilters = useMemo(() => {
-    const unique = new Map<number, FamilyStory>();
+    const unique = new Map<number, EpisodeFilter>();
     stories.forEach((story) => {
       if (!unique.has(story.episodeNo)) {
-        unique.set(story.episodeNo, story);
+        unique.set(story.episodeNo, {
+          episodeNo: story.episodeNo,
+          episodeTitle: story.episodeTitle,
+          familyCount: 0,
+          familyNames: [],
+        });
+      }
+
+      const episode = unique.get(story.episodeNo);
+      if (episode) {
+        episode.familyCount += 1;
+        episode.familyNames.push(story.name);
       }
     });
     return Array.from(unique.values()).sort((a, b) => b.episodeNo - a.episodeNo);
   }, [stories]);
 
   const matchedFamilies = stories.filter((story) => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const normalizedQuery = normalizeSearchText(searchQuery);
     const matchesSearch =
       normalizedQuery.length === 0 ||
-      story.name.toLowerCase().includes(normalizedQuery) ||
-      story.location.toLowerCase().includes(normalizedQuery) ||
-      story.description.toLowerCase().includes(normalizedQuery) ||
-      story.story.toLowerCase().includes(normalizedQuery) ||
-      story.episodeTitle.toLowerCase().includes(normalizedQuery);
+      matchesSearchToken(story, normalizedQuery);
     const matchesEpisode = selectedEpisode === null || selectedEpisode === story.episodeNo;
 
     return matchesSearch && matchesEpisode;
@@ -194,25 +240,28 @@ export default function FamiliesScreen() {
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.episodeList}>
-              {episodeFilters.map((story) => {
-                const isSelected = selectedEpisode === story.episodeNo;
+              {episodeFilters.map((episode) => {
+                const isSelected = selectedEpisode === episode.episodeNo;
 
                 return (
                   <Pressable
-                    key={`episode-filter-${story.episodeNo}`}
+                    key={`episode-filter-${episode.episodeNo}`}
                     onPress={() => {
                       setShowAllFamilies(true);
-                      setSelectedEpisode((current) => (current === story.episodeNo ? null : story.episodeNo));
+                      setSelectedEpisode((current) => (current === episode.episodeNo ? null : episode.episodeNo));
                     }}
                     className={`mr-3 rounded-[18px] p-3 ${isSelected ? 'bg-primary' : 'bg-[#FAF7F2]'}`}
                     style={styles.episodeCard}
                   >
-                    <Text className={`font-beBold text-[11px] uppercase ${isSelected ? 'text-white' : 'text-primary'}`}>Episode {story.episodeNo}</Text>
+                    <View className="flex-row items-center justify-between">
+                      <Text className={`font-beBold text-[11px] uppercase ${isSelected ? 'text-white' : 'text-primary'}`}>Episode {episode.episodeNo}</Text>
+                      <Text className={`font-beBold text-[10px] uppercase ${isSelected ? 'text-[#FBE9E7]' : 'text-[#B7842D]'}`}>{episode.familyCount} families</Text>
+                    </View>
                     <Text className={`mt-2 font-beSemiBold text-sm leading-5 ${isSelected ? 'text-white' : 'text-[#261F1A]'}`} numberOfLines={2}>
-                      {story.name}
+                      {episode.episodeTitle}
                     </Text>
                     <Text className={`mt-1 font-beRegular text-[11px] leading-4 ${isSelected ? 'text-[#FBE9E7]' : 'text-[#756B63]'}`} numberOfLines={2}>
-                      {story.episodeTitle}
+                      {episode.familyNames.slice(0, 3).join(', ')}
                     </Text>
                   </Pressable>
                 );
@@ -326,8 +375,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   episodeCard: {
-    minHeight: 104,
-    width: 152,
+    minHeight: 116,
+    width: 184,
   },
   episodeList: {
     paddingRight: 4,

@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/design';
+import { BackendUser } from '@/data/backend';
 import { episodes, families } from '@/data/mock';
+import { clearSession, refreshSessionUser } from '@/data/session';
 
 const sections = [
   {
@@ -27,13 +29,55 @@ const sections = [
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(false);
-  const [selectedItem, setSelectedItem] = useState('Personal information updated');
+  const [selectedItem, setSelectedItem] = useState('Account ready');
+  const [user, setUser] = useState<BackendUser | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const favoriteFamilies = families.slice(0, 2);
   const favoriteEpisodes = episodes.slice(0, 2);
   const donationHistory = [
     { id: 'don-1', family: families[0].name, amount: '$45', date: 'May 4, 2026', status: 'Completed' },
     { id: 'don-2', family: families[2].name, amount: '$30', date: 'May 1, 2026', status: 'Completed' },
   ];
+  const initials = (user?.full_name ?? user?.email ?? 'DN')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'DN';
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUser() {
+      try {
+        const session = await refreshSessionUser();
+
+        if (mounted) {
+          setUser(session.user);
+          setSelectedItem(session.user ? 'Signed in with backend account' : 'No active session');
+        }
+      } catch {
+        if (mounted) {
+          setSelectedItem('Could not refresh account details');
+        }
+      } finally {
+        if (mounted) {
+          setLoadingUser(false);
+        }
+      }
+    }
+
+    void loadUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await clearSession();
+    router.replace('/login');
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'bottom']}>
@@ -50,11 +94,27 @@ export default function SettingsScreen() {
           <View className="mt-6 rounded-[28px] bg-white p-5" style={styles.panel}>
             <View className="flex-row items-center">
               <View className="h-14 w-14 items-center justify-center rounded-[22px] bg-primary">
-                <Text className="font-beBold text-lg text-white">DN</Text>
+                <Text className="font-beBold text-lg text-white">{initials}</Text>
               </View>
               <View className="ml-4 flex-1">
-                <Text className="font-beBold text-xl text-[#261F1A]">Donor account</Text>
-                <Text className="mt-1 font-beRegular text-sm text-[#756B63]">Manage your support activity and preferences.</Text>
+                <Text className="font-beBold text-xl text-[#261F1A]" numberOfLines={1}>
+                  {loadingUser ? 'Loading account...' : user?.full_name ?? 'Guest account'}
+                </Text>
+                <Text className="mt-1 font-beRegular text-sm text-[#756B63]" numberOfLines={1}>
+                  {user?.email ?? 'Sign in to sync your support activity.'}
+                </Text>
+                <View className="mt-2 flex-row flex-wrap gap-2">
+                  {user?.role ? (
+                    <View className="rounded-full bg-[#F3EAE1] px-3 py-1">
+                      <Text className="font-beBold text-[10px] uppercase text-primary">{user.role}</Text>
+                    </View>
+                  ) : null}
+                  {user?.phone_number ? (
+                    <View className="rounded-full bg-[#FAF7F2] px-3 py-1">
+                      <Text className="font-beMedium text-[10px] text-[#756B63]">{user.phone_number}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
             </View>
           </View>
@@ -191,7 +251,7 @@ export default function SettingsScreen() {
             <Text className="font-beSemiBold text-sm text-primary">{selectedItem}</Text>
           </View>
 
-          <Pressable onPress={() => router.replace('/login')} className="mt-5 rounded-[22px] border border-[#E4D2C8] bg-white px-4 py-4">
+          <Pressable onPress={handleSignOut} className="mt-5 rounded-[22px] border border-[#E4D2C8] bg-white px-4 py-4">
             <Text className="text-center font-beBold text-primary">Sign out</Text>
           </Pressable>
         </View>

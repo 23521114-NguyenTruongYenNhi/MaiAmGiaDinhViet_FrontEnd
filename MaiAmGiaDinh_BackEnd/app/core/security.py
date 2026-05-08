@@ -1,20 +1,33 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
 from typing import Optional
 
+import bcrypt
 from jose import jwt
-from passlib.context import CryptContext
 
 from app.core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def password_digest(password: str) -> bytes:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest().encode("utf-8")
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password_digest(password), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    hash_bytes = hashed_password.encode("utf-8")
+
+    if bcrypt.checkpw(password_digest(plain_password), hash_bytes):
+        return True
+
+    # Backward compatibility for older users created with direct bcrypt.
+    raw_password = plain_password.encode("utf-8")
+    if len(raw_password) <= 72:
+        return bcrypt.checkpw(raw_password, hash_bytes)
+
+    return False
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
