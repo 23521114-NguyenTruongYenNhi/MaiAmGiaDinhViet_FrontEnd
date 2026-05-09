@@ -467,7 +467,7 @@ def import_news(session: Session):
     print("NEWS COLUMNS:", df.columns.tolist())
 
     inserted_count = 0
-    skipped_duplicate = 0
+    updated_count = 0
 
     for _, row in df.iterrows():
         title = clean_text(get_value(row, "Title", "title"))
@@ -480,25 +480,25 @@ def import_news(session: Session):
         ).first()
 
         if existing_news:
-            skipped_duplicate += 1
-            continue
+            news = existing_news
+            updated_count += 1
+        else:
+            news = News(
+                title=title,
+                created_at=datetime.now(timezone.utc),
+            )
+            inserted_count += 1
 
-        news = News(
-            title=title,
-            content=clean_text(get_value(row, "Content", "content")),
-            type=map_news_type(get_value(row, "Category", "Type", "type")),
-            image_url=clean_text(get_value(row, "Image URL", "image_url")),
-            published_at=parse_datetime(get_value(row, "Date Posted", "published_at")),
-            created_at=datetime.now(timezone.utc),
-        )
+        news.content = clean_text(get_value(row, "Content", "content"))
+        news.type = map_news_type(get_value(row, "Category", "Type", "type"))
+        news.image_url = clean_text(get_value(row, "Image URL", "image_url"))
+        news.published_at = parse_datetime(get_value(row, "Date Posted", "published_at"))
 
         session.add(news)
         session.commit()
 
-        inserted_count += 1
-
     print(f"New news inserted: {inserted_count}")
-    print(f"Skipped duplicate news: {skipped_duplicate}")
+    print(f"Existing news updated: {updated_count}")
 
 
 def run():

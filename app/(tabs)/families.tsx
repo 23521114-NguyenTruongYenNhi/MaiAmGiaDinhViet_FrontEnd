@@ -7,7 +7,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryTag } from '@/components/ui/category-tag';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { palette } from '@/constants/design';
-import { combineFamilyStories, FamilyStory, formatDate, getBackendCases, getBackendEpisodes, getBackendFamilies } from '@/data/backend';
+import {
+  BackendUserAction,
+  combineFamilyStories,
+  createBackendUserAction,
+  deleteBackendUserAction,
+  FamilyStory,
+  formatDate,
+  getBackendCases,
+  getBackendEpisodes,
+  getBackendFamilies,
+  getBackendUserActions,
+} from '@/data/backend';
+import { getSession } from '@/data/session';
 
 type Filter = 'All' | 'Latest' | 'Urgent' | 'Saved';
 
@@ -55,9 +67,10 @@ export default function FamiliesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEpisode, setSelectedEpisode] = useState<number | null>(null);
   const [showAllFamilies, setShowAllFamilies] = useState(false);
-  const [savedFamilies, setSavedFamilies] = useState<string[]>([]);
+  const [savedActions, setSavedActions] = useState<Record<string, BackendUserAction>>({});
   const [stories, setStories] = useState<FamilyStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -69,9 +82,13 @@ export default function FamiliesScreen() {
         getBackendCases(),
         getBackendFamilies(),
       ]);
+      const session = await getSession();
+      const actions = session.token ? await getBackendUserActions(session.token, 'BOOKMARK') : [];
 
       if (mounted) {
+        setToken(session.token);
         setStories(combineFamilyStories(cases, families, episodes));
+        setSavedActions(Object.fromEntries(actions.map((action) => [action.case_id, action])));
         setLoading(false);
       }
     }
@@ -131,7 +148,7 @@ export default function FamiliesScreen() {
     }
 
     if (activeFilter === 'Saved') {
-      return savedFamilies.includes(story.caseId);
+      return Boolean(savedActions[story.caseId]);
     }
 
     return true;
@@ -166,8 +183,47 @@ export default function FamiliesScreen() {
     return 'Priority families';
   })();
 
-  const toggleSaved = (caseId: string) => {
-    setSavedFamilies((current) => (current.includes(caseId) ? current.filter((id) => id !== caseId) : [...current, caseId]));
+  const toggleSaved = async (caseId: string) => {
+    if (!token) {
+      return;
+    }
+
+    const existing = savedActions[caseId];
+
+    if (existing) {
+      setSavedActions((current) => {
+        const next = { ...current };
+        delete next[caseId];
+        return next;
+      });
+
+      try {
+        await deleteBackendUserAction(token, existing.id);
+      } catch {
+        setSavedActions((current) => ({ ...current, [caseId]: existing }));
+      }
+      return;
+    }
+
+    const pendingAction: BackendUserAction = {
+      id: `pending-${caseId}`,
+      user_id: 'pending',
+      case_id: caseId,
+      action_type: 'BOOKMARK',
+      created_at: new Date().toISOString(),
+    };
+    setSavedActions((current) => ({ ...current, [caseId]: pendingAction }));
+
+    try {
+      const action = await createBackendUserAction(token, caseId, 'BOOKMARK');
+      setSavedActions((current) => ({ ...current, [caseId]: action }));
+    } catch {
+      setSavedActions((current) => {
+        const next = { ...current };
+        delete next[caseId];
+        return next;
+      });
+    }
   };
 
   return (
@@ -290,7 +346,7 @@ export default function FamiliesScreen() {
             </View>
 
             {displayFamilies.map((story, index) => {
-              const isSaved = savedFamilies.includes(story.caseId);
+              const isSaved = Boolean(savedActions[story.caseId]);
               const showEpisodeDivider = showAllFamilies && selectedEpisode === null && story.episodeNo !== displayFamilies[index - 1]?.episodeNo;
 
               return (
@@ -314,7 +370,7 @@ export default function FamiliesScreen() {
                         <View className="rounded-full bg-white px-3 py-1.5">
                           <Text className="font-beBold text-[10px] uppercase text-primary">Episode {story.episodeNo}</Text>
                         </View>
-                        <Pressable onPress={() => toggleSaved(story.caseId)} hitSlop={10}>
+                        <Pressable onPress={() => void toggleSaved(story.caseId)} hitSlop={10}>
                           <Ionicons name={isSaved ? 'heart' : 'heart-outline'} size={21} color={palette.primary} />
                         </Pressable>
                       </View>

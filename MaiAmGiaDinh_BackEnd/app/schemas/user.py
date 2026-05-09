@@ -22,6 +22,10 @@ class UserUpdate(SQLModel):
     phone_number: Optional[str] = None
 
 
+class UserRoleUpdate(SQLModel):
+    role: str
+
+
 class UserRead(SQLModel):
     id: UUID
     full_name: str

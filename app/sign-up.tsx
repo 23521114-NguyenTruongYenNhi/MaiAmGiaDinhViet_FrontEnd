@@ -10,7 +10,7 @@ import { palette } from '@/constants/design';
 import { CustomButton } from '@/components/ui/custom-button';
 import { InfoInput } from '@/components/ui/info-input';
 import { getBackendMe, loginBackend, loginWithGoogleBackend, registerBackend } from '@/data/backend';
-import { createMockAuthToken, createMockUser, isMockAuthEnabled } from '@/data/dev-auth';
+import { safeBack } from '@/data/navigation';
 import { saveSession } from '@/data/session';
 import { validateDateOfBirth, validateEmail, validateName, validatePassword, validatePhone } from '@/data/validation';
 
@@ -170,18 +170,6 @@ export default function SignUpScreen() {
         }
     };
 
-    const handleMockLogin = async (role: 'USER' | 'ADMIN') => {
-        setGoogleLoading(true);
-        setErrorMessage('');
-
-        try {
-            await saveSession(createMockAuthToken(), createMockUser(role));
-            router.replace(role === 'ADMIN' ? '/admin' : '/(tabs)');
-        } finally {
-            setGoogleLoading(false);
-        }
-    };
-
     return (
         <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
             <KeyboardAvoidingView style={styles.screen}>
@@ -190,7 +178,7 @@ export default function SignUpScreen() {
                 </Animated.View>
 
                 <Animated.View entering={FadeIn.delay(160).duration(700)} style={styles.sheetContainer}>
-                    <Pressable onPress={() => router.back()} style={styles.backBtn}>
+                    <Pressable onPress={() => safeBack('/login')} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </Pressable>
 
@@ -241,22 +229,6 @@ export default function SignUpScreen() {
                                 <Text style={styles.googleBtnText}>{googleLoading ? 'Signing in...' : 'Continue with Google'}</Text>
                             </Pressable>
 
-                            {isMockAuthEnabled ? (
-                                <View style={styles.mockButtonRow}>
-                                    <Pressable
-                                        style={[styles.mockButton, googleLoading && styles.disabledPress]}
-                                        onPress={googleLoading ? undefined : () => handleMockLogin('USER')}
-                                    >
-                                        <Text style={styles.mockButtonText}>Test user</Text>
-                                    </Pressable>
-                                    <Pressable
-                                        style={[styles.mockButton, googleLoading && styles.disabledPress]}
-                                        onPress={googleLoading ? undefined : () => handleMockLogin('ADMIN')}
-                                    >
-                                        <Text style={styles.mockButtonText}>Test admin</Text>
-                                    </Pressable>
-                                </View>
-                            ) : null}
                         </View>
                     </ScrollView>
                 </Animated.View>
@@ -364,27 +336,6 @@ const styles = StyleSheet.create({
         color: '#2B2B2B',
         fontSize: 15,
         fontWeight: '600',
-    },
-    mockButtonRow: {
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 8,
-        justifyContent: 'center',
-        marginTop: 12,
-    },
-    mockButton: {
-        alignItems: 'center',
-        borderColor: 'rgba(255,255,255,0.36)',
-        borderRadius: 999,
-        borderWidth: 1,
-        justifyContent: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-    },
-    mockButtonText: {
-        color: '#FFFFFF',
-        fontSize: 11,
-        fontWeight: '700',
     },
     disabledPress: {
         opacity: 0.6,

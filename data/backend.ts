@@ -81,6 +81,24 @@ export type BackendUser = {
   updated_at: string;
 };
 
+export type BackendUserAction = {
+  id: string;
+  user_id: string;
+  case_id: string;
+  action_type: string;
+  note?: string | null;
+  created_at: string;
+};
+
+export type BackendEpisodeAction = {
+  id: string;
+  user_id: string;
+  episode_id: string;
+  action_type: string;
+  note?: string | null;
+  created_at: string;
+};
+
 export type FamilyStory = {
   id: string;
   caseId: string;
@@ -291,6 +309,69 @@ export async function loginBackend(email: string, password: string) {
 
 export async function getBackendMe(token: string) {
   return apiRequest<BackendUser>('/users/me', { token });
+}
+
+export async function updateBackendMe(token: string, payload: {
+  full_name?: string;
+  phone_number?: string | null;
+}) {
+  return apiRequest<BackendUser>('/users/me', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getBackendUsers(token: string) {
+  return apiRequest<BackendUser[]>('/users/?limit=100', { token });
+}
+
+export async function updateBackendUserRole(token: string, userId: string, role: 'USER' | 'ADMIN') {
+  return apiRequest<BackendUser>(`/users/${userId}/role`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function getBackendUserActions(token: string, actionType?: string) {
+  const query = actionType ? `?action_type=${encodeURIComponent(actionType)}` : '';
+  return apiRequest<BackendUserAction[]>(`/user-actions/me${query}`, { token });
+}
+
+export async function createBackendUserAction(token: string, caseId: string, actionType = 'BOOKMARK') {
+  return apiRequest<BackendUserAction>('/user-actions/', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ case_id: caseId, action_type: actionType }),
+  });
+}
+
+export async function deleteBackendUserAction(token: string, actionId: string) {
+  return apiRequest<void>(`/user-actions/${actionId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function getBackendEpisodeActions(token: string, actionType?: string) {
+  const query = actionType ? `?action_type=${encodeURIComponent(actionType)}` : '';
+  return apiRequest<BackendEpisodeAction[]>(`/episode-actions/me${query}`, { token });
+}
+
+export async function createBackendEpisodeAction(token: string, episodeId: string, actionType = 'BOOKMARK') {
+  return apiRequest<BackendEpisodeAction>('/episode-actions/', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ episode_id: episodeId, action_type: actionType }),
+  });
+}
+
+export async function deleteBackendEpisodeAction(token: string, actionId: string) {
+  return apiRequest<void>(`/episode-actions/${actionId}`, {
+    method: 'DELETE',
+    token,
+  });
 }
 
 export async function loginWithGoogleBackend(idToken: string) {

@@ -5,7 +5,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/design';
+import { BackendUser, getBackendUsers, updateBackendUserRole } from '@/data/backend';
 import { families, newsFeed } from '@/data/mock';
+import { safeBack } from '@/data/navigation';
 import { getSession } from '@/data/session';
 
 type ModuleKey = 'families' | 'banking' | 'content' | 'reports' | 'roles';
@@ -38,13 +40,6 @@ const reports = [
   { id: 'content', title: 'Publishing Activity', meta: 'Released episodes and news updates', value: 'XLSX' },
 ];
 
-const roles = [
-  { id: 'owner', title: 'Owner', meta: 'Full operational access', value: 'Core' },
-  { id: 'content-admin', title: 'Content Admin', meta: 'Manage episodes and updates', value: 'Staff' },
-  { id: 'verifier', title: 'Verifier', meta: 'Review families and payment details', value: 'Staff' },
-  { id: 'finance-reviewer', title: 'Finance Reviewer', meta: 'Audit reports and donation records', value: 'Staff' },
-];
-
 function toggleItem(list: string[], id: string) {
   return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
 }
@@ -57,7 +52,8 @@ export default function AdminScreen() {
   const [verifiedAccounts, setVerifiedAccounts] = useState<string[]>([]);
   const [publishedItems, setPublishedItems] = useState<string[]>([]);
   const [exportedReports, setExportedReports] = useState<string[]>([]);
-  const [enabledRoles, setEnabledRoles] = useState<string[]>(['owner', 'verifier']);
+  const [adminUsers, setAdminUsers] = useState<BackendUser[]>([]);
+  const [token, setToken] = useState<string | null>(null);
   const [statusNote, setStatusNote] = useState('Ready');
 
   const activeCount = families.filter((family) => family.status === 'ACTIVE').length;
@@ -75,10 +71,20 @@ export default function AdminScreen() {
       }
 
       setIsAuthorized(allowed);
+      setToken(session.token);
       setCheckingAccess(false);
 
       if (!allowed) {
         router.replace('/login');
+        return;
+      }
+
+      if (session.token) {
+        try {
+          setAdminUsers(await getBackendUsers(session.token));
+        } catch {
+          setStatusNote('Could not load users');
+        }
       }
     }
 
@@ -144,18 +150,20 @@ export default function AdminScreen() {
       });
     }
 
-    return roles.map((role) => {
-      const done = enabledRoles.includes(role.id);
+    return adminUsers.map((user) => {
+      const done = user.role === 'ADMIN';
       return {
-        ...role,
-        value: done ? 'Enabled' : 'Disabled',
-        action: done ? 'Disable' : 'Enable',
+        id: user.id,
+        title: user.full_name || user.email,
+        meta: user.email,
+        value: user.role,
+        action: done ? 'Set USER' : 'Set ADMIN',
         done,
       };
     });
-  }, [activeModule, approvedFamilies, verifiedAccounts, publishedItems, exportedReports, enabledRoles]);
+  }, [activeModule, approvedFamilies, verifiedAccounts, publishedItems, exportedReports, adminUsers]);
 
-  const handleRowAction = (row: AdminRow) => {
+  const handleRowAction = async (row: AdminRow) => {
     if (activeModule === 'families') {
       setApprovedFamilies((current) => toggleItem(current, row.id));
       setStatusNote(row.done ? `${row.title} returned to review` : `${row.title} approved`);
@@ -180,8 +188,27 @@ export default function AdminScreen() {
       return;
     }
 
-    setEnabledRoles((current) => toggleItem(current, row.id));
-    setStatusNote(row.done ? `${row.title} disabled` : `${row.title} enabled`);
+    if (!token) {
+      setStatusNote('No admin session');
+      return;
+    }
+
+    const nextRole = row.done ? 'USER' : 'ADMIN';
+    const previousUsers = adminUsers;
+    setAdminUsers((current) => current.map((user) => (
+      user.id === row.id ? { ...user, role: nextRole } : user
+    )));
+    setStatusNote(`${row.title} set to ${nextRole}`);
+
+    try {
+      const updatedUser = await updateBackendUserRole(token, row.id, nextRole);
+      setAdminUsers((current) => current.map((user) => (
+        user.id === updatedUser.id ? updatedUser : user
+      )));
+    } catch {
+      setAdminUsers(previousUsers);
+      setStatusNote('Could not update role');
+    }
   };
 
   if (checkingAccess || !isAuthorized) {
@@ -197,7 +224,7 @@ export default function AdminScreen() {
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
         <View style={styles.page}>
           <View className="mt-3 flex-row items-center justify-between">
-            <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full bg-white" style={styles.circle}>
+            <Pressable onPress={() => safeBack('/(tabs)')} className="h-11 w-11 items-center justify-center rounded-full bg-white" style={styles.circle}>
               <Ionicons name="arrow-back" size={20} color={palette.text} />
             </Pressable>
             <View className="items-center">
@@ -303,7 +330,7 @@ export default function AdminScreen() {
                   </View>
                   <Text className={`ml-2 font-beBold text-xs ${row.done ? 'text-[#1F8B4C]' : 'text-primary'}`}>{row.value}</Text>
                 </View>
-                <Pressable onPress={() => handleRowAction(row)} className={`mt-3 self-start rounded-full px-3 py-2 ${row.done ? 'bg-white' : 'bg-primary'}`}>
+                <Pressable onPress={() => void handleRowAction(row)} className={`mt-3 self-start rounded-full px-3 py-2 ${row.done ? 'bg-white' : 'bg-primary'}`}>
                   <Text className={`font-beSemiBold text-xs ${row.done ? 'text-primary' : 'text-white'}`}>{row.action}</Text>
                 </Pressable>
               </Pressable>

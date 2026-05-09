@@ -6,7 +6,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { palette } from '@/constants/design';
-import { BackendEpisode, combineFamilyStories, FamilyStory, formatDate, getBackendCases, getBackendEpisodes, getBackendFamilies, imageFromUrl } from '@/data/backend';
+import {
+  BackendEpisode,
+  BackendEpisodeAction,
+  combineFamilyStories,
+  createBackendEpisodeAction,
+  deleteBackendEpisodeAction,
+  FamilyStory,
+  formatDate,
+  getBackendCases,
+  getBackendEpisodeActions,
+  getBackendEpisodes,
+  getBackendFamilies,
+  imageFromUrl,
+} from '@/data/backend';
+import { getSession } from '@/data/session';
 
 type EpisodeRow = BackendEpisode & {
   firstCaseId?: string;
@@ -18,6 +32,8 @@ type EpisodeRow = BackendEpisode & {
 export default function EpisodesScreen() {
   const [episodes, setEpisodes] = useState<EpisodeRow[]>([]);
   const [stories, setStories] = useState<FamilyStory[]>([]);
+  const [savedActions, setSavedActions] = useState<Record<string, BackendEpisodeAction>>({});
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -28,6 +44,8 @@ export default function EpisodesScreen() {
         getBackendCases(),
         getBackendFamilies(),
       ]);
+      const session = await getSession();
+      const actions = session.token ? await getBackendEpisodeActions(session.token, 'BOOKMARK') : [];
       const familyStories = combineFamilyStories(caseRows, familyRows, episodeRows);
       const rows = episodeRows
         .map((episode, index) => {
@@ -43,8 +61,10 @@ export default function EpisodesScreen() {
         .sort((a, b) => b.episode_no - a.episode_no);
 
       if (mounted) {
+        setToken(session.token);
         setEpisodes(rows);
         setStories(familyStories);
+        setSavedActions(Object.fromEntries(actions.map((action) => [action.episode_id, action])));
       }
     }
 
@@ -59,6 +79,49 @@ export default function EpisodesScreen() {
     () => stories.find((story) => story.episodeId === latestEpisode?.id),
     [latestEpisode?.id, stories],
   );
+
+  const toggleSavedEpisode = async (episodeId: string) => {
+    if (!token) {
+      return;
+    }
+
+    const existing = savedActions[episodeId];
+
+    if (existing) {
+      setSavedActions((current) => {
+        const next = { ...current };
+        delete next[episodeId];
+        return next;
+      });
+
+      try {
+        await deleteBackendEpisodeAction(token, existing.id);
+      } catch {
+        setSavedActions((current) => ({ ...current, [episodeId]: existing }));
+      }
+      return;
+    }
+
+    const pendingAction: BackendEpisodeAction = {
+      id: `pending-${episodeId}`,
+      user_id: 'pending',
+      episode_id: episodeId,
+      action_type: 'BOOKMARK',
+      created_at: new Date().toISOString(),
+    };
+    setSavedActions((current) => ({ ...current, [episodeId]: pendingAction }));
+
+    try {
+      const action = await createBackendEpisodeAction(token, episodeId, 'BOOKMARK');
+      setSavedActions((current) => ({ ...current, [episodeId]: action }));
+    } catch {
+      setSavedActions((current) => {
+        const next = { ...current };
+        delete next[episodeId];
+        return next;
+      });
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'left', 'right']}>
@@ -78,6 +141,12 @@ export default function EpisodesScreen() {
                   <View className="mb-3 self-start rounded-full bg-[#FDECEC] px-3.5 py-2" style={styles.latestBadge}>
                     <Text className="font-beBold text-[10px] uppercase text-[#B3261E]">Latest episode</Text>
                   </View>
+                  <Pressable
+                    onPress={() => void toggleSavedEpisode(latestEpisode.id)}
+                    className="absolute right-5 top-5 h-10 w-10 items-center justify-center rounded-full bg-white"
+                  >
+                    <Ionicons name={savedActions[latestEpisode.id] ? 'heart' : 'heart-outline'} size={20} color={palette.primary} />
+                  </Pressable>
                   <Text className="font-beBold text-[25px] leading-[32px] text-white">{latestEpisode.title}</Text>
                   <View className="mt-3 rounded-2xl bg-black/32 px-3 py-2">
                     <Text className="font-beRegular text-sm leading-6 text-white" numberOfLines={3}>{latestEpisode.description}</Text>
@@ -110,6 +179,12 @@ export default function EpisodesScreen() {
                   style={styles.posterCard}
                 >
                   <Image source={imageFromUrl(null, index)} resizeMode="cover" style={styles.posterImage} />
+                  <Pressable
+                    onPress={() => void toggleSavedEpisode(item.id)}
+                    className="absolute right-2 top-2 h-9 w-9 items-center justify-center rounded-full bg-white"
+                  >
+                    <Ionicons name={savedActions[item.id] ? 'heart' : 'heart-outline'} size={18} color={palette.primary} />
+                  </Pressable>
                   <View className="p-3">
                     <Text className="font-beBold text-[10px] uppercase text-primary">Episode {item.episode_no}</Text>
                     <Text className="mt-1 font-beSemiBold text-sm leading-5 text-[#261F1A]" numberOfLines={2}>{item.title}</Text>
@@ -133,7 +208,12 @@ export default function EpisodesScreen() {
                   <View className="ml-3 flex-1 justify-between py-1">
                     <View>
                       <Text className="font-beBold text-[11px] uppercase text-primary">Episode {item.episode_no}</Text>
-                      <Text className="mt-1 font-beBold text-base leading-6 text-[#261F1A]" numberOfLines={2}>{item.title}</Text>
+                      <View className="mt-1 flex-row items-start">
+                        <Text className="flex-1 font-beBold text-base leading-6 text-[#261F1A]" numberOfLines={2}>{item.title}</Text>
+                        <Pressable onPress={() => void toggleSavedEpisode(item.id)} hitSlop={10}>
+                          <Ionicons name={savedActions[item.id] ? 'heart' : 'heart-outline'} size={19} color={palette.primary} />
+                        </Pressable>
+                      </View>
                       <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]" numberOfLines={2}>{item.description}</Text>
                     </View>
                     <Text className="font-beMedium text-xs text-[#B7842D]">{formatDate(item.air_date)} - {item.familyCount} families</Text>

@@ -10,6 +10,7 @@ import { FormattedContent } from '@/components/ui/formatted-content';
 import { CustomButton } from '@/components/ui/custom-button';
 import { palette } from '@/constants/design';
 import { combineFamilyStories, FamilyStory, formatDate, getBackendCaseDetail, getBackendEpisodes } from '@/data/backend';
+import { safeBack } from '@/data/navigation';
 
 export default function FamilyStoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -59,7 +60,7 @@ export default function FamilyStoryDetailScreen() {
     <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'bottom']}>
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
         <View className="mt-3 flex-row items-center justify-between">
-          <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full bg-white">
+          <Pressable onPress={() => safeBack('/(tabs)/families')} className="h-11 w-11 items-center justify-center rounded-full bg-white">
             <Ionicons name="arrow-back" size={20} color={palette.text} />
           </Pressable>
           <Text className="font-beSemiBold text-base text-[#261F1A]">Family profile</Text>

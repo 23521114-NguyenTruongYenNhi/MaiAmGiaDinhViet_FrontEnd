@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormattedContent, getContentPreview } from '@/components/ui/formatted-content';
 import { palette } from '@/constants/design';
 import { BackendNews, formatDate, getBackendNewsDetail } from '@/data/backend';
+import { safeBack } from '@/data/navigation';
 
 export default function UpdateDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,7 +43,7 @@ export default function UpdateDetailScreen() {
     <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'bottom']}>
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
         <View className="mt-3 flex-row items-center justify-between">
-          <Pressable onPress={() => router.back()} className="h-11 w-11 items-center justify-center rounded-full bg-white">
+          <Pressable onPress={() => safeBack('/(tabs)/news')} className="h-11 w-11 items-center justify-center rounded-full bg-white">
             <Ionicons name="arrow-back" size={20} color={palette.text} />
           </Pressable>
           <Text className="font-beSemiBold text-base text-[#261F1A]">Program update</Text>
