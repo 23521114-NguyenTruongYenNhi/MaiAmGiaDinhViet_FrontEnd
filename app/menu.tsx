@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { palette } from '@/constants/design';
+import { getSession } from '@/data/session';
 
 const items = [
   { label: 'Families', caption: 'Verified support profiles', icon: 'people', route: '/(tabs)/families' as const },
@@ -14,6 +16,28 @@ const items = [
 ];
 
 export default function MenuScreen() {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSession() {
+      const session = await getSession();
+
+      if (mounted) {
+        setIsAdmin(session.user?.role === 'ADMIN');
+      }
+    }
+
+    void loadSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const visibleItems = items.filter((item) => item.route !== '/admin' || isAdmin);
+
   return (
     <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'bottom']}>
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 28 }}>
@@ -27,7 +51,7 @@ export default function MenuScreen() {
           </View>
 
           <View className="mt-6 flex-row flex-wrap justify-between">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <Pressable key={item.label} onPress={() => router.push(item.route)} className="mb-3 bg-white p-4" style={styles.tile}>
                 <View className="h-11 w-11 items-center justify-center rounded-full bg-[#F3EAE1]">
                   <Ionicons name={item.icon as never} size={21} color={palette.primary} />

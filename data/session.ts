@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { BackendUser, getBackendMe } from '@/data/backend';
+import { isMockAuthToken } from '@/data/dev-auth';
 
 const TOKEN_KEY = 'maiam.auth.token';
 const USER_KEY = 'maiam.auth.user';
@@ -26,6 +27,10 @@ export async function refreshSessionUser() {
 
   if (!token) {
     return { token: null, user };
+  }
+
+  if (isMockAuthToken(token)) {
+    return { token, user };
   }
 
   const freshUser = await getBackendMe(token);

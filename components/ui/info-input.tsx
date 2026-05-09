@@ -10,6 +10,10 @@ type Props = {
     onToggleSecure?: () => void;
     keyboardType?: 'default' | 'email-address' | 'phone-pad';
     labelClassName?: string;
+    maxLength?: number;
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+    autoCorrect?: boolean;
+    textContentType?: 'none' | 'emailAddress' | 'password' | 'newPassword' | 'telephoneNumber' | 'name';
 };
 
 export function InfoInput({
@@ -21,6 +25,10 @@ export function InfoInput({
     onToggleSecure,
     keyboardType = 'default',
     labelClassName = 'text-[#5F5550]',
+    maxLength,
+    autoCapitalize = 'sentences',
+    autoCorrect = true,
+    textContentType,
 }: Props) {
     return (
         <View className="mb-3">
@@ -33,6 +41,10 @@ export function InfoInput({
                     placeholder={placeholder}
                     secureTextEntry={secureTextEntry}
                     keyboardType={keyboardType}
+                    maxLength={maxLength}
+                    autoCapitalize={autoCapitalize}
+                    autoCorrect={autoCorrect}
+                    textContentType={textContentType}
                     className="flex-1 text-[15px] text-[#2B2B2B]"
                     placeholderTextColor="#A29D97"
                 />

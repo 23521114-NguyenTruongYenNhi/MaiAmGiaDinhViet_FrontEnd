@@ -9,7 +9,9 @@ import { palette, typography } from '@/constants/design';
 import { CustomButton } from '@/components/ui/custom-button';
 import { InfoInput } from '@/components/ui/info-input';
 import { getBackendMe, loginBackend, loginWithGoogleBackend } from '@/data/backend';
+import { createMockAuthToken, createMockUser, isMockAuthEnabled } from '@/data/dev-auth';
 import { saveSession } from '@/data/session';
+import { validateEmail, validateLoginPassword } from '@/data/validation';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,6 +34,10 @@ export default function LoginScreen() {
         selectAccount: true,
     });
 
+    const handleEmailChange = (value: string) => {
+        setEmail(value.trim().toLowerCase());
+    };
+
     const getFriendlyError = (message: string) => {
         if (message.includes('Invalid email or password') || message.includes('401')) {
             return 'Email or password is incorrect.';
@@ -46,9 +52,10 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         const trimmedEmail = email.trim().toLowerCase();
+        const validationMessage = validateEmail(trimmedEmail) || validateLoginPassword(password);
 
-        if (!trimmedEmail || !password) {
-            setErrorMessage('Please enter both email and password.');
+        if (validationMessage) {
+            setErrorMessage(validationMessage);
             return;
         }
 
@@ -142,10 +149,22 @@ export default function LoginScreen() {
                 googleAuthInProgressRef.current = false;
                 setGoogleLoading(false);
             }
-        } catch (error) {
+        } catch {
             googleAuthInProgressRef.current = false;
             setGoogleLoading(false);
             setErrorMessage('Google Sign-In failed. Please try again.');
+        }
+    };
+
+    const handleMockLogin = async (role: 'USER' | 'ADMIN') => {
+        setGoogleLoading(true);
+        setErrorMessage('');
+
+        try {
+            await saveSession(createMockAuthToken(), createMockUser(role));
+            router.replace(role === 'ADMIN' ? '/admin' : '/(tabs)');
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
@@ -169,8 +188,13 @@ export default function LoginScreen() {
                             <InfoInput
                                 label="Email"
                                 value={email}
-                                onChangeText={setEmail}
+                                onChangeText={handleEmailChange}
                                 placeholder="alex@example.com"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                textContentType="emailAddress"
+                                maxLength={120}
                                 labelClassName="text-white mb-1"
                             />
 
@@ -180,6 +204,10 @@ export default function LoginScreen() {
                                 onChangeText={setPassword}
                                 placeholder="****************"
                                 secureTextEntry
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                textContentType="password"
+                                maxLength={72}
                                 labelClassName="text-white mb-1"
                             />
 
@@ -195,7 +223,6 @@ export default function LoginScreen() {
 
                             <CustomButton label={loading ? 'Logging in...' : 'Login'} variant="secondary" onPress={loading ? undefined : handleLogin} className="mt-8 w-[220px] self-center" />
 
-                            <Text style={styles.adminHint}>Use an account registered in the backend database.</Text>
 
                             <View style={styles.dividerWrap}>
                                 <View style={styles.dividerLine} />
@@ -212,6 +239,23 @@ export default function LoginScreen() {
                                 </View>
                                 {googleLoading ? <Text style={styles.googleLoadingText}>Signing in...</Text> : null}
                             </Pressable>
+
+                            {isMockAuthEnabled ? (
+                                <View style={styles.mockButtonRow}>
+                                    <Pressable
+                                        style={[styles.mockButton, googleLoading && styles.disabledPress]}
+                                        onPress={googleLoading ? undefined : () => handleMockLogin('USER')}
+                                    >
+                                        <Text style={styles.mockButtonText}>Test user</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={[styles.mockButton, googleLoading && styles.disabledPress]}
+                                        onPress={googleLoading ? undefined : () => handleMockLogin('ADMIN')}
+                                    >
+                                        <Text style={styles.mockButtonText}>Test admin</Text>
+                                    </Pressable>
+                                </View>
+                            ) : null}
 
                             <View style={styles.signUpWrap}>
                                 <Text style={styles.noAccountText}>Don&apos;t have an account? </Text>
@@ -359,6 +403,26 @@ const styles = StyleSheet.create({
         fontFamily: typography.body.fontFamily,
         fontSize: 12,
         marginTop: 8,
+    },
+    mockButtonRow: {
+        alignSelf: 'center',
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 16,
+    },
+    mockButton: {
+        alignSelf: 'center',
+        borderColor: 'rgba(255,255,255,0.36)',
+        borderRadius: 999,
+        borderWidth: 1,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+    },
+    mockButtonText: {
+        color: '#FFFFFF',
+        fontFamily: typography.body.fontFamily,
+        fontSize: 11,
+        fontWeight: '700',
     },
     noAccountText: {
         color: 'white',

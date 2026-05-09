@@ -10,7 +10,9 @@ import { palette } from '@/constants/design';
 import { CustomButton } from '@/components/ui/custom-button';
 import { InfoInput } from '@/components/ui/info-input';
 import { getBackendMe, loginBackend, loginWithGoogleBackend, registerBackend } from '@/data/backend';
+import { createMockAuthToken, createMockUser, isMockAuthEnabled } from '@/data/dev-auth';
 import { saveSession } from '@/data/session';
+import { validateDateOfBirth, validateEmail, validateName, validatePassword, validatePhone } from '@/data/validation';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -37,12 +39,37 @@ export default function SignUpScreen() {
         selectAccount: true,
     });
 
+    const handleNameChange = (setter: (value: string) => void) => (value: string) => {
+        setter(value.replace(/[^A-Za-zÀ-ỹ\s'-]/g, ''));
+    };
+
+    const handleEmailChange = (value: string) => {
+        setEmail(value.trim().toLowerCase());
+    };
+
+    const handleDobChange = (value: string) => {
+        const digits = value.replace(/\D/g, '').slice(0, 8);
+        const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+        setDob(parts.join('/'));
+    };
+
+    const handlePhoneChange = (value: string) => {
+        setPhone(value.replace(/[^0-9+()\s-]/g, '').slice(0, 20));
+    };
+
     const handleSignUp = async () => {
         const fullName = `${lastName.trim()} ${firstName.trim()}`.trim();
         const normalizedEmail = email.trim().toLowerCase();
+        const validationMessage =
+            validateName(lastName, 'Last name') ||
+            validateName(firstName, 'First name') ||
+            validateEmail(normalizedEmail) ||
+            validateDateOfBirth(dob) ||
+            validatePhone(phone) ||
+            validatePassword(password);
 
-        if (!fullName || !normalizedEmail || !password) {
-            setErrorMessage('Please enter your name, email, and password.');
+        if (validationMessage) {
+            setErrorMessage(validationMessage);
             return;
         }
 
@@ -136,10 +163,22 @@ export default function SignUpScreen() {
                 googleAuthInProgressRef.current = false;
                 setGoogleLoading(false);
             }
-        } catch (error) {
+        } catch {
             googleAuthInProgressRef.current = false;
             setGoogleLoading(false);
             setErrorMessage('Google Sign-In failed. Please try again.');
+        }
+    };
+
+    const handleMockLogin = async (role: 'USER' | 'ADMIN') => {
+        setGoogleLoading(true);
+        setErrorMessage('');
+
+        try {
+            await saveSession(createMockAuthToken(), createMockUser(role));
+            router.replace(role === 'ADMIN' ? '/admin' : '/(tabs)');
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
@@ -167,18 +206,18 @@ export default function SignUpScreen() {
                         <View style={styles.form}>
                             <View style={styles.row}>
                                 <View style={styles.flex1}>
-                                    <InfoInput label="Last name" value={lastName} onChangeText={setLastName} placeholder="Johnson" labelClassName="text-white mb-1" />
+                                    <InfoInput label="Last name" value={lastName} onChangeText={handleNameChange(setLastName)} placeholder="Johnson" textContentType="name" maxLength={40} labelClassName="text-white mb-1" />
                                 </View>
                                 <View style={{ width: 12 }} />
                                 <View style={styles.flex1}>
-                                    <InfoInput label="First name" value={firstName} onChangeText={setFirstName} placeholder="Alex" labelClassName="text-white mb-1" />
+                                    <InfoInput label="First name" value={firstName} onChangeText={handleNameChange(setFirstName)} placeholder="Alex" textContentType="name" maxLength={40} labelClassName="text-white mb-1" />
                                 </View>
                             </View>
 
-                            <InfoInput label="Email" value={email} onChangeText={setEmail} placeholder="alex@example.com" labelClassName="text-white mb-1" />
-                            <InfoInput label="Date of birth" value={dob} onChangeText={setDob} placeholder="01/01/2005" labelClassName="text-white mb-1" />
-                            <InfoInput label="Phone number" value={phone} onChangeText={setPhone} placeholder="(84) 123 456 789" labelClassName="text-white mb-1" />
-                            <InfoInput label="Set password" value={password} onChangeText={setPassword} placeholder="****************" secureTextEntry labelClassName="text-white mb-1" />
+                            <InfoInput label="Email" value={email} onChangeText={handleEmailChange} placeholder="alex@example.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} textContentType="emailAddress" maxLength={120} labelClassName="text-white mb-1" />
+                            <InfoInput label="Date of birth" value={dob} onChangeText={handleDobChange} placeholder="01/01/2005" keyboardType="phone-pad" maxLength={10} labelClassName="text-white mb-1" />
+                            <InfoInput label="Phone number" value={phone} onChangeText={handlePhoneChange} placeholder="(84) 123 456 789" keyboardType="phone-pad" textContentType="telephoneNumber" maxLength={20} labelClassName="text-white mb-1" />
+                            <InfoInput label="Set password" value={password} onChangeText={setPassword} placeholder="****************" secureTextEntry autoCapitalize="none" autoCorrect={false} textContentType="newPassword" maxLength={72} labelClassName="text-white mb-1" />
 
                             {errorMessage ? (
                                 <View style={styles.errorBox}>
@@ -201,6 +240,23 @@ export default function SignUpScreen() {
                                 <Image source={require('../assets/images/google.jpg')} style={styles.googleBtnIcon} resizeMode="contain" />
                                 <Text style={styles.googleBtnText}>{googleLoading ? 'Signing in...' : 'Continue with Google'}</Text>
                             </Pressable>
+
+                            {isMockAuthEnabled ? (
+                                <View style={styles.mockButtonRow}>
+                                    <Pressable
+                                        style={[styles.mockButton, googleLoading && styles.disabledPress]}
+                                        onPress={googleLoading ? undefined : () => handleMockLogin('USER')}
+                                    >
+                                        <Text style={styles.mockButtonText}>Test user</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={[styles.mockButton, googleLoading && styles.disabledPress]}
+                                        onPress={googleLoading ? undefined : () => handleMockLogin('ADMIN')}
+                                    >
+                                        <Text style={styles.mockButtonText}>Test admin</Text>
+                                    </Pressable>
+                                </View>
+                            ) : null}
                         </View>
                     </ScrollView>
                 </Animated.View>
@@ -308,6 +364,27 @@ const styles = StyleSheet.create({
         color: '#2B2B2B',
         fontSize: 15,
         fontWeight: '600',
+    },
+    mockButtonRow: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'center',
+        marginTop: 12,
+    },
+    mockButton: {
+        alignItems: 'center',
+        borderColor: 'rgba(255,255,255,0.36)',
+        borderRadius: 999,
+        borderWidth: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+    },
+    mockButtonText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '700',
     },
     disabledPress: {
         opacity: 0.6,

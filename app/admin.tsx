@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/design';
 import { families, newsFeed } from '@/data/mock';
+import { getSession } from '@/data/session';
 
 type ModuleKey = 'families' | 'banking' | 'content' | 'reports' | 'roles';
 
@@ -49,6 +50,8 @@ function toggleItem(list: string[], id: string) {
 }
 
 export default function AdminScreen() {
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
   const [activeModule, setActiveModule] = useState<ModuleKey>('families');
   const [approvedFamilies, setApprovedFamilies] = useState<string[]>([]);
   const [verifiedAccounts, setVerifiedAccounts] = useState<string[]>([]);
@@ -59,6 +62,32 @@ export default function AdminScreen() {
 
   const activeCount = families.filter((family) => family.status === 'ACTIVE').length;
   const active = modules.find((module) => module.key === activeModule) ?? modules[0];
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkAccess() {
+      const session = await getSession();
+      const allowed = session.user?.role === 'ADMIN';
+
+      if (!mounted) {
+        return;
+      }
+
+      setIsAuthorized(allowed);
+      setCheckingAccess(false);
+
+      if (!allowed) {
+        router.replace('/login');
+      }
+    }
+
+    void checkAccess();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const rows: AdminRow[] = useMemo(() => {
     if (activeModule === 'families') {
@@ -154,6 +183,14 @@ export default function AdminScreen() {
     setEnabledRoles((current) => toggleItem(current, row.id));
     setStatusNote(row.done ? `${row.title} disabled` : `${row.title} enabled`);
   };
+
+  if (checkingAccess || !isAuthorized) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-[#FAF7F2]" edges={['top', 'bottom']}>
+        <Text className="font-beSemiBold text-sm text-[#756B63]">Checking admin access...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'bottom']}>
