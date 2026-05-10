@@ -23,6 +23,8 @@
   &nbsp;|&nbsp;
   <a href="#tech-stack">Tech Stack</a>
   &nbsp;|&nbsp;
+  <a href="./docs/system-architecture.md">Architecture</a>
+  &nbsp;|&nbsp;
   <a href="#getting-started">Getting Started</a>
   &nbsp;|&nbsp;
   <a href="#project-structure">Project Structure</a>
@@ -62,6 +64,12 @@ The app also includes local fallback data so core screens can still render when 
 | Mustard | <span style="display:inline-block;width:18px;height:18px;background:#D6A84A;border-radius:4px;border:1px solid #ddd;"></span> | `#D6A84A` |
 | Success | <span style="display:inline-block;width:18px;height:18px;background:#1F8B4C;border-radius:4px;border:1px solid #ddd;"></span> | `#1F8B4C` |
 | Danger | <span style="display:inline-block;width:18px;height:18px;background:#B3261E;border-radius:4px;border:1px solid #ddd;"></span> | `#B3261E` |
+
+## System Architecture
+
+The full system architecture diagram is available here:
+
+[View System Architecture](./docs/system-architecture.md)
 
 ## Tech Stack
 
