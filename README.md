@@ -67,9 +67,10 @@ The app also includes local fallback data so core screens can still render when 
 
 ## System Architecture
 
-The full system architecture diagram is available here:
+Architecture diagrams are available here:
 
-[View System Architecture](./docs/system-architecture.md)
+- [Simple Technology Architecture](./docs/system-architecture-simple.md)
+- [Detailed System Architecture](./docs/system-architecture.md)
 
 ## Tech Stack
 
