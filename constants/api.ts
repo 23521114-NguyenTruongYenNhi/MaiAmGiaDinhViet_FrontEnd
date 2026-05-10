@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.26:8000';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://172.20.10.2:8000';
 
 type ApiOptions = RequestInit & {
   token?: string;
