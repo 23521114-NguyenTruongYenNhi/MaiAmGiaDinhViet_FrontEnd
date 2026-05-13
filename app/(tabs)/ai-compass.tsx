@@ -18,6 +18,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { palette } from '@/constants/design';
 import {
   askBackendChatbot,
+  BackendChatMessage,
   combineFamilyStories,
   getBackendCases,
   getBackendEpisodes,
@@ -109,6 +110,14 @@ export default function AICompassScreen() {
       return;
     }
 
+    const chatHistory: BackendChatMessage[] = messages
+      .filter((message) => message.role === 'user' || message.role === 'assistant')
+      .slice(-6)
+      .map((message) => ({
+        role: message.role,
+        content: message.text,
+      }));
+
     const userMessage: Message = { id: `${Date.now()}-user`, role: 'user', text };
     const typingMessage: Message = { id: `${Date.now()}-typing`, role: 'typing', text: '' };
 
@@ -118,7 +127,7 @@ export default function AICompassScreen() {
     scrollToEnd();
 
     try {
-      const response = await askBackendChatbot(text);
+      const response = await askBackendChatbot(text, chatHistory);
       const familyId = await findRelatedFamilyId(`${text}\n${response.reply}`);
       setMessages((current) => current
         .filter((message) => message.role !== 'typing')

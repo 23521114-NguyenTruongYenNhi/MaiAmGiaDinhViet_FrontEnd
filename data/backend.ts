@@ -66,6 +66,11 @@ export type BackendChatResponse = {
   context_used?: number;
 };
 
+export type BackendChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 export type BackendToken = {
   access_token: string;
   token_type: string;
@@ -273,11 +278,11 @@ export async function getBackendNewsDetail(id: string) {
   }
 }
 
-export async function askBackendChatbot(message: string) {
+export async function askBackendChatbot(message: string, history: BackendChatMessage[] = []) {
   try {
     return await apiRequest<BackendChatResponse>('/chatbot/', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history }),
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Unknown error';

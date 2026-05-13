@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -29,6 +29,10 @@ type EpisodeRow = BackendEpisode & {
   families: FamilyStory[];
 };
 
+function hasVideoUrl(videoUrl?: string | null) {
+  return Boolean(videoUrl && !/^https?:\/\/(?:www\.)?youtu\.be\/?$/i.test(videoUrl.trim()));
+}
+
 export default function EpisodesScreen() {
   const [episodes, setEpisodes] = useState<EpisodeRow[]>([]);
   const [stories, setStories] = useState<FamilyStory[]>([]);
@@ -39,13 +43,15 @@ export default function EpisodesScreen() {
     let mounted = true;
 
     async function loadEpisodes() {
-      const [episodeRows, caseRows, familyRows] = await Promise.all([
-        getBackendEpisodes(),
-        getBackendCases(),
-        getBackendFamilies(),
+      const episodeRows = await getBackendEpisodes();
+      const [caseRows, familyRows] = await Promise.all([
+        getBackendCases().catch(() => []),
+        getBackendFamilies().catch(() => []),
       ]);
-      const session = await getSession();
-      const actions = session.token ? await getBackendEpisodeActions(session.token, 'BOOKMARK') : [];
+      const session = await getSession().catch(() => ({ token: null }));
+      const actions = session.token
+        ? await getBackendEpisodeActions(session.token, 'BOOKMARK').catch(() => [])
+        : [];
       const familyStories = combineFamilyStories(caseRows, familyRows, episodeRows);
       const rows = episodeRows
         .map((episode, index) => {
@@ -123,6 +129,23 @@ export default function EpisodesScreen() {
     }
   };
 
+  const openEpisodeVideo = async (episode: BackendEpisode) => {
+    const videoUrl = episode.video_url?.trim();
+
+    if (!videoUrl || !hasVideoUrl(videoUrl)) {
+      Alert.alert('Video unavailable', 'This episode does not have a YouTube link yet.');
+      return;
+    }
+
+    const canOpen = await Linking.canOpenURL(videoUrl);
+    if (!canOpen) {
+      Alert.alert('Cannot open video', 'The YouTube link for this episode is invalid.');
+      return;
+    }
+
+    await Linking.openURL(videoUrl);
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-[#FAF7F2]" edges={['top', 'left', 'right']}>
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
@@ -131,7 +154,7 @@ export default function EpisodesScreen() {
 
           {latestEpisode ? (
             <Pressable
-              onPress={() => latestEpisode.firstCaseId && router.push(`/family/${latestEpisode.firstCaseId}`)}
+              onPress={() => void openEpisodeVideo(latestEpisode)}
               className="mt-5 overflow-hidden"
               style={styles.spotlight}
             >
@@ -142,7 +165,10 @@ export default function EpisodesScreen() {
                     <Text className="font-beBold text-[10px] uppercase text-[#B3261E]">Latest episode</Text>
                   </View>
                   <Pressable
-                    onPress={() => void toggleSavedEpisode(latestEpisode.id)}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      void toggleSavedEpisode(latestEpisode.id);
+                    }}
                     className="absolute right-5 top-5 h-10 w-10 items-center justify-center rounded-full bg-white"
                   >
                     <Ionicons name={savedActions[latestEpisode.id] ? 'heart' : 'heart-outline'} size={20} color={palette.primary} />
@@ -174,13 +200,22 @@ export default function EpisodesScreen() {
               {episodes.slice(0, 12).map((item, index) => (
                 <Pressable
                   key={item.id}
-                  onPress={() => item.firstCaseId && router.push(`/family/${item.firstCaseId}`)}
+                  onPress={() => void openEpisodeVideo(item)}
                   className="mr-3 overflow-hidden bg-white"
                   style={styles.posterCard}
                 >
-                  <Image source={imageFromUrl(null, index)} resizeMode="cover" style={styles.posterImage} />
+                  <View style={styles.posterImageFrame}>
+                    <Image source={imageFromUrl(null, index)} resizeMode="cover" style={styles.posterImage} />
+                    <View style={styles.posterImageShade} />
+                    <View className="absolute bottom-3 left-3 h-10 w-10 items-center justify-center rounded-full bg-white">
+                      <Ionicons name="play" size={16} color={palette.primary} />
+                    </View>
+                  </View>
                   <Pressable
-                    onPress={() => void toggleSavedEpisode(item.id)}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      void toggleSavedEpisode(item.id);
+                    }}
                     className="absolute right-2 top-2 h-9 w-9 items-center justify-center rounded-full bg-white"
                   >
                     <Ionicons name={savedActions[item.id] ? 'heart' : 'heart-outline'} size={18} color={palette.primary} />
@@ -204,7 +239,13 @@ export default function EpisodesScreen() {
                 style={styles.rowCard}
               >
                 <View className="flex-row">
-                  <Image source={imageFromUrl(null, index)} resizeMode="cover" style={styles.rowImage} />
+                  <Pressable onPress={() => void openEpisodeVideo(item)} style={styles.rowImageFrame}>
+                    <Image source={imageFromUrl(null, index)} resizeMode="cover" style={styles.rowImage} />
+                    <View style={styles.rowImageShade} />
+                    <View className="absolute bottom-2 right-2 h-9 w-9 items-center justify-center rounded-full bg-white">
+                      <Ionicons name="play" size={15} color={palette.primary} />
+                    </View>
+                  </Pressable>
                   <View className="ml-3 flex-1 justify-between py-1">
                     <View>
                       <Text className="font-beBold text-[11px] uppercase text-primary">Episode {item.episode_no}</Text>
@@ -280,6 +321,15 @@ const styles = StyleSheet.create({
     height: 128,
     width: '100%',
   },
+  posterImageFrame: {
+    height: 128,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  posterImageShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(34, 24, 19, 0.18)',
+  },
   rowCard: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -291,6 +341,17 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     height: 112,
     width: 104,
+  },
+  rowImageFrame: {
+    borderRadius: 18,
+    height: 112,
+    overflow: 'hidden',
+    position: 'relative',
+    width: 104,
+  },
+  rowImageShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(34, 24, 19, 0.16)',
   },
   spotlight: {
     borderRadius: 10,

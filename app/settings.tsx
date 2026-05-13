@@ -49,7 +49,6 @@ export default function SettingsScreen() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [savedFamilies, setSavedFamilies] = useState<FamilyStory[]>([]);
   const [savedEpisodes, setSavedEpisodes] = useState<BackendEpisode[]>([]);
-  const [helpedFamilies, setHelpedFamilies] = useState<FamilyStory[]>([]);
   const initials = (user?.full_name ?? user?.email ?? 'DN')
     .split(/\s+/)
     .filter(Boolean)
@@ -75,22 +74,19 @@ export default function SettingsScreen() {
         }
 
         if (token) {
-          const [episodes, cases, families, savedCaseActions, helpedCaseActions, savedEpisodeActions] = await Promise.all([
+          const [episodes, cases, families, savedCaseActions, savedEpisodeActions] = await Promise.all([
             getBackendEpisodes(),
             getBackendCases(),
             getBackendFamilies(),
             getBackendUserActions(token, 'BOOKMARK'),
-            getBackendUserActions(token, 'HELPED'),
             getBackendEpisodeActions(token, 'BOOKMARK'),
           ]);
           const stories = combineFamilyStories(cases, families, episodes);
           const savedCaseIds = new Set(savedCaseActions.map((action) => action.case_id));
-          const helpedCaseIds = new Set(helpedCaseActions.map((action) => action.case_id));
           const savedEpisodeIds = new Set(savedEpisodeActions.map((action) => action.episode_id));
 
           if (mounted) {
             setSavedFamilies(stories.filter((story) => savedCaseIds.has(story.caseId)));
-            setHelpedFamilies(stories.filter((story) => helpedCaseIds.has(story.caseId)));
             setSavedEpisodes(episodes.filter((episode) => savedEpisodeIds.has(episode.id)));
           }
         }
@@ -187,7 +183,7 @@ export default function SettingsScreen() {
             <View className="flex-row items-center justify-between border-t border-[#EFE6DD] pt-3">
               <View>
                 <Text className="font-beBold text-base text-[#261F1A]">Weekly summary</Text>
-                <Text className="mt-1 font-beRegular text-xs text-[#756B63]">A concise report every week</Text>
+                <Text className="mt-1 font-beRegular text-xs text-[#756B63]">A concise update every week</Text>
               </View>
               <Switch
                 value={weeklyDigestEnabled}
@@ -274,32 +270,6 @@ export default function SettingsScreen() {
               </Pressable>
             )) : (
               <Text className="font-beRegular text-sm leading-6 text-[#756B63]">No saved episodes yet.</Text>
-            )}
-          </View>
-
-          <View className="mt-5 rounded-[26px] bg-white p-4" style={styles.panel}>
-            <View className="mb-3 flex-row items-center justify-between">
-              <Text className="font-beBold text-lg text-[#261F1A]">Donation history</Text>
-              <Text className="font-beMedium text-xs uppercase text-[#B7842D]">{helpedFamilies.length} helped</Text>
-            </View>
-            {helpedFamilies.length ? helpedFamilies.map((family, index) => (
-              <Pressable
-                key={family.caseId}
-                onPress={() => router.push(`/family/${family.caseId}`)}
-                className="flex-row items-center py-3"
-                style={index !== helpedFamilies.length - 1 ? styles.divider : undefined}
-              >
-                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-[#E9F8EE]">
-                  <Ionicons name="receipt-outline" size={20} color={palette.success} />
-                </View>
-                <View className="ml-3 flex-1">
-                  <Text className="font-beSemiBold text-base text-[#261F1A]">{family.name}</Text>
-                  <Text className="mt-1 font-beRegular text-xs leading-5 text-[#756B63]">Marked as helped - Episode {family.episodeNo}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={palette.primary} />
-              </Pressable>
-            )) : (
-              <Text className="font-beRegular text-sm leading-6 text-[#756B63]">No helped families recorded yet.</Text>
             )}
           </View>
 

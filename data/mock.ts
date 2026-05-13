@@ -120,7 +120,7 @@ export const episodes: Episode[] = [
     title: 'Mai Am Gia Dinh Viet - Episode 184',
     description: 'A broadcast story following families in difficult circumstances and the support journey created through the program.',
     airDate: 'May 1, 2026',
-    videoUrl: 'https://youtu.be/',
+    videoUrl: 'https://youtu.be/8bXTcPkA-5o',
     isFeatured: true,
     duration: '45:00',
     thumbnail: heroImage,

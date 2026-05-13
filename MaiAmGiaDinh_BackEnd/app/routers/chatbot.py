@@ -1,6 +1,8 @@
+import json
 import os
+import re
 import time
-from typing import List
+from typing import List, Sequence
 
 import psycopg
 from fastapi import APIRouter, HTTPException
@@ -17,9 +19,12 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 EMBEDDING_MODEL = "gemini-embedding-001"
 CHAT_MODEL = "models/gemini-flash-lite-latest"
 EMBEDDING_DIMENSION = 768
-CHAT_MATCH_COUNT = 3
-MAX_CONTEXT_CHARS_PER_DOC = 900
-MAX_OUTPUT_TOKENS = 320
+CHAT_MATCH_COUNT = 6
+KEYWORD_MATCH_COUNT = 3
+MAX_CONTEXT_CHARS_PER_DOC = 1300
+MAX_HISTORY_MESSAGES = 6
+MAX_HISTORY_CHARS = 1800
+MAX_OUTPUT_TOKENS = 700
 
 
 def normalize_db_url(url: str) -> str:
@@ -74,6 +79,57 @@ def retrieve_documents(query_embedding: List[float], match_count: int = 5):
     return documents
 
 
+def keyword_search_documents(query: str, match_count: int = KEYWORD_MATCH_COUNT):
+    words = [
+        word
+        for word in re.findall(r"[\wÀ-ỹ]+", query.lower())
+        if len(word) >= 3
+    ][:8]
+
+    if not words:
+        return []
+
+    db_url = normalize_db_url(DATABASE_URL)
+    clauses = " or ".join(["content ilike %s"] * len(words))
+    params = [f"%{word}%" for word in words]
+
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                select id, content, metadata, 0.0 as similarity
+                from documents
+                where {clauses}
+                limit %s
+                """,
+                (*params, match_count),
+            )
+            rows = cur.fetchall()
+
+    return [
+        {
+            "id": row[0],
+            "content": row[1],
+            "metadata": row[2],
+            "similarity": row[3],
+        }
+        for row in rows
+    ]
+
+
+def merge_documents(primary, fallback):
+    seen = set()
+    merged = []
+
+    for doc in [*primary, *fallback]:
+        if doc["id"] in seen:
+            continue
+        seen.add(doc["id"])
+        merged.append(doc)
+
+    return merged
+
+
 def trim_text(text: str, max_chars: int) -> str:
     text = " ".join((text or "").split())
 
@@ -83,32 +139,103 @@ def trim_text(text: str, max_chars: int) -> str:
     return f"{text[:max_chars].rstrip()}..."
 
 
+def metadata_to_text(metadata) -> str:
+    if not metadata:
+        return ""
+
+    if isinstance(metadata, str):
+        try:
+            metadata = json.loads(metadata)
+        except json.JSONDecodeError:
+            return metadata
+
+    if not isinstance(metadata, dict):
+        return str(metadata)
+
+    useful_keys = [
+        "source",
+        "title",
+        "episode_no",
+        "episode_name",
+        "location",
+        "category",
+        "date_posted",
+    ]
+    parts = [
+        f"{key}: {metadata.get(key)}"
+        for key in useful_keys
+        if metadata.get(key)
+    ]
+    return "; ".join(parts)
+
+
 def build_context(documents) -> str:
     context_blocks = []
 
     for index, doc in enumerate(documents, start=1):
         content = trim_text(doc["content"], MAX_CONTEXT_CHARS_PER_DOC)
-        context_blocks.append(f"[Document {index}]\n{content}")
+        metadata = metadata_to_text(doc.get("metadata"))
+        similarity = doc.get("similarity")
+        source_line = f"Metadata: {metadata}" if metadata else "Metadata: unknown"
+        score_line = f"Match score: {similarity}" if similarity is not None else ""
+        context_blocks.append(
+            f"[Document {index}]\n{source_line}\n{score_line}\nContent:\n{content}".strip()
+        )
 
     return "\n\n---\n\n".join(context_blocks)
 
 
-def generate_answer(user_question: str, context: str) -> str:
-    sys_instruct = """You are a warm, empathetic virtual assistant for the charity program "Mai Am Gia Dinh Viet".
+def detect_language(text: str) -> str:
+    vietnamese_signals = set("ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ")
+    lowered = text.lower()
+    if any(char in vietnamese_signals for char in lowered):
+        return "Vietnamese"
+    if re.search(r"\b(cho|toi|tôi|ban|bạn|gia dinh|gia đình|quyen gop|quyên góp|tap|tập)\b", lowered):
+        return "Vietnamese"
+    return "English"
+
+
+def build_history(history: Sequence) -> str:
+    if not history:
+        return ""
+
+    lines = []
+    total = 0
+
+    for item in history[-MAX_HISTORY_MESSAGES:]:
+        role = "User" if item.role == "user" else "Assistant"
+        content = trim_text(item.content, 450)
+        next_line = f"{role}: {content}"
+        total += len(next_line)
+        if total > MAX_HISTORY_CHARS:
+            break
+        lines.append(next_line)
+
+    return "\n".join(lines)
+
+
+def generate_answer(user_question: str, context: str, history: str = "") -> str:
+    language = detect_language(user_question)
+    sys_instruct = f"""You are a warm, precise virtual assistant for the charity program "Mai Am Gia Dinh Viet".
+
+Reply language: {language}. Use this language for the entire answer.
 
 [CRITICAL RULE]
-You MUST reply in the EXACT SAME LANGUAGE as the User's Question.
-- If the User Question is in English -> You MUST translate the context and reply entirely in English.
-- If the User Question is in Vietnamese -> You MUST reply entirely in Vietnamese.
+- Answer only from the provided context and conversation history. Do not invent names, bank details, locations, episodes, dates, or donation information.
+- If the context is not enough, say that clearly and suggest what the user can ask next.
 
 [TONE & CONTENT RULES]
-- Answer ONLY based on the provided context. Do not invent facts.
-- Speak naturally like a caring human volunteer. Jump straight into the story.
-- DO NOT use robotic greetings (e.g., avoid "Here is the information...").
-- Keep the answer concise, around 2-5 short sentences unless the user asks for details.
-- If asked about donations, provide the exact bank details from the context."""
+- Speak naturally like a caring human volunteer, but stay factual.
+- Prefer short Markdown that is easy to read on mobile.
+- Use bullets when listing families, donation details, or next steps.
+- If the user asks about one family/profile, lead with the family/person name, location, episode, and core need if available.
+- If asked about donations, include exact bank name, account name, and account number only when present in context.
+- Keep the answer concise: usually 2-6 short sentences unless the user asks for details."""
 
-    prompt = f"""[CONTEXT]
+    prompt = f"""[CONVERSATION HISTORY]
+{history or "No previous messages."}
+
+[CONTEXT]
 {context}
 
 [USER QUESTION]
@@ -152,18 +279,28 @@ def chat_with_bot(payload: ChatRequest):
         query_embedding = embed_query(user_question)
         embedded_at = time.perf_counter()
         documents = retrieve_documents(query_embedding, match_count=CHAT_MATCH_COUNT)
+        keyword_documents = keyword_search_documents(user_question)
+        documents = merge_documents(documents, keyword_documents)
         retrieved_at = time.perf_counter()
 
         if not documents:
+            language = detect_language(user_question)
+            reply = (
+                "Mình chưa tìm thấy thông tin liên quan trong dữ liệu hiện tại. "
+                "Bạn thử hỏi bằng tên gia đình, địa phương, số tập, hoặc nội dung cần quyên góp nhé."
+                if language == "Vietnamese"
+                else "I haven't found related information in the current data. Try asking with a family name, location, episode number, or donation need."
+            )
             return ChatResponse(
-                reply="I haven't found any related information in the current data",
+                reply=reply,
                 context_used=0,
             )
 
         context = build_context(documents)
+        history = build_history(payload.history or [])
 
         try:
-            answer = generate_answer(user_question, context)
+            answer = generate_answer(user_question, context, history)
             answered_at = time.perf_counter()
             print(
                 "chatbot timing "
@@ -177,8 +314,8 @@ def chat_with_bot(payload: ChatRequest):
             if is_temporary_model_error(e):
                 return ChatResponse(
                     reply=(
-                        "Gemini dang bi qua tai tam thoi nen minh chua tao duoc cau tra loi moi. "
-                        "Backend da tim thay du lieu lien quan, ban thu gui lai cau hoi sau vai giay nhe."
+                        "Gemini đang bị quá tải tạm thời nên mình chưa tạo được câu trả lời mới. "
+                        "Backend đã tìm thấy dữ liệu liên quan, bạn thử gửi lại câu hỏi sau vài giây nhé."
                     ),
                     context_used=len(documents),
                 )

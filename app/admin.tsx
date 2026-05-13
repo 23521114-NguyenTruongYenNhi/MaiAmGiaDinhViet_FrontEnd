@@ -10,7 +10,7 @@ import { families, newsFeed } from '@/data/mock';
 import { safeBack } from '@/data/navigation';
 import { getSession } from '@/data/session';
 
-type ModuleKey = 'families' | 'banking' | 'content' | 'reports' | 'roles';
+type ModuleKey = 'families' | 'content' | 'roles';
 
 type AdminRow = {
   id: string;
@@ -28,16 +28,8 @@ const modules: {
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   { key: 'families', label: 'Family Review', caption: 'Approve household records', icon: 'people' },
-  { key: 'banking', label: 'Payment Check', caption: 'Verify account details', icon: 'card' },
   { key: 'content', label: 'Publishing', caption: 'Release news and episodes', icon: 'newspaper' },
-  { key: 'reports', label: 'Reports', caption: 'Prepare export files', icon: 'analytics' },
   { key: 'roles', label: 'Access', caption: 'Control admin roles', icon: 'lock-closed' },
-];
-
-const reports = [
-  { id: 'monthly', title: 'Monthly Support Summary', meta: 'Families, account records, support notes', value: 'CSV' },
-  { id: 'verification', title: 'Verification Log', meta: 'Profile updates and reviewer notes', value: 'PDF' },
-  { id: 'content', title: 'Publishing Activity', meta: 'Released episodes and news updates', value: 'XLSX' },
 ];
 
 function toggleItem(list: string[], id: string) {
@@ -49,9 +41,7 @@ export default function AdminScreen() {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [activeModule, setActiveModule] = useState<ModuleKey>('families');
   const [approvedFamilies, setApprovedFamilies] = useState<string[]>([]);
-  const [verifiedAccounts, setVerifiedAccounts] = useState<string[]>([]);
   const [publishedItems, setPublishedItems] = useState<string[]>([]);
-  const [exportedReports, setExportedReports] = useState<string[]>([]);
   const [adminUsers, setAdminUsers] = useState<BackendUser[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const [statusNote, setStatusNote] = useState('Ready');
@@ -110,20 +100,6 @@ export default function AdminScreen() {
       });
     }
 
-    if (activeModule === 'banking') {
-      return families.map((family) => {
-        const done = verifiedAccounts.includes(family.id);
-        return {
-          id: family.id,
-          title: family.beneficiary,
-          meta: `${family.bank} - ${family.accountNumber}`,
-          value: done ? 'Verified' : family.bank,
-          action: done ? 'Recheck' : 'Verify',
-          done,
-        };
-      });
-    }
-
     if (activeModule === 'content') {
       return newsFeed.map((item) => {
         const done = publishedItems.includes(item.id);
@@ -133,18 +109,6 @@ export default function AdminScreen() {
           meta: `${item.category} - ${item.readTime}`,
           value: done ? 'Published' : item.isNew ? 'Draft' : 'Queued',
           action: done ? 'Unpublish' : 'Publish',
-          done,
-        };
-      });
-    }
-
-    if (activeModule === 'reports') {
-      return reports.map((report) => {
-        const done = exportedReports.includes(report.id);
-        return {
-          ...report,
-          value: done ? 'Exported' : report.value,
-          action: done ? 'Refresh' : 'Export',
           done,
         };
       });
@@ -161,7 +125,7 @@ export default function AdminScreen() {
         done,
       };
     });
-  }, [activeModule, approvedFamilies, verifiedAccounts, publishedItems, exportedReports, adminUsers]);
+  }, [activeModule, approvedFamilies, publishedItems, adminUsers]);
 
   const handleRowAction = async (row: AdminRow) => {
     if (activeModule === 'families') {
@@ -170,21 +134,9 @@ export default function AdminScreen() {
       return;
     }
 
-    if (activeModule === 'banking') {
-      setVerifiedAccounts((current) => toggleItem(current, row.id));
-      setStatusNote(row.done ? `${row.title} marked for recheck` : `${row.title} verified`);
-      return;
-    }
-
     if (activeModule === 'content') {
       setPublishedItems((current) => toggleItem(current, row.id));
       setStatusNote(row.done ? `${row.title} unpublished` : `${row.title} published`);
-      return;
-    }
-
-    if (activeModule === 'reports') {
-      setExportedReports((current) => (current.includes(row.id) ? current : [...current, row.id]));
-      setStatusNote(`${row.title} export prepared`);
       return;
     }
 
@@ -244,7 +196,7 @@ export default function AdminScreen() {
               <View className="flex-1">
                 <Text className="font-beBold text-[27px] leading-[34px] text-[#261F1A]">Control Center</Text>
                 <Text className="mt-2 font-beRegular text-sm leading-6 text-[#6E635B]">
-                  Review family records, verify payment data, publish content, and manage access.
+                  Review family records, publish content, and manage access.
                 </Text>
               </View>
             </View>

@@ -207,6 +207,14 @@ def import_episodes(session: Session):
         ).first()
 
         if existing:
+            video_url = clean_text(get_value(row, "Video Link", "Video URL", "video_url"))
+            if video_url and not existing.video_url:
+                existing.video_url = video_url
+                existing.updated_at = datetime.now(timezone.utc)
+                session.add(existing)
+                session.commit()
+                session.refresh(existing)
+
             episode_map[episode_no] = existing.id
             continue
 
