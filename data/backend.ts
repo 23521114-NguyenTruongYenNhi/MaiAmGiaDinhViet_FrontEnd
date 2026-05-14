@@ -145,6 +145,16 @@ export function imageFromUrl(url: string | null | undefined, index = 0): ImageSo
   return fallbackImages[index % fallbackImages.length];
 }
 
+export function imageFromVideoUrl(videoUrl: string | null | undefined, index = 0): ImageSourcePropType {
+  const id = videoUrl?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/i)?.[1];
+
+  if (id) {
+    return { uri: `https://img.youtube.com/vi/${id}/hqdefault.jpg` };
+  }
+
+  return imageFromUrl(null, index);
+}
+
 export function formatDate(value?: string | null) {
   if (!value) {
     return 'No date';
@@ -246,36 +256,40 @@ export async function getBackendFamilies() {
 }
 
 export async function getBackendNews() {
-  try {
-    return await getAllPages<BackendNews>('/news/');
-  } catch {
-    return fallbackNews.map((item) => ({
-      id: item.id,
-      title: item.title,
-      content: item.body,
-      type: item.category,
-      image_url: null,
-      published_at: item.date,
-      created_at: item.date,
-    }));
-  }
+    try {
+        return await getAllPages<BackendNews>('/news/');
+    } catch {
+        return fallbackNews.map((item) => ({
+            id: item.id,
+            title: item.title,
+            content: item.body,
+            type: item.category,
+            image_url:
+                'https://images.unsplash.com/photo-1495020689067-958852a7765e?q=80&w=1200&auto=format&fit=crop',
+            published_at: item.date,
+            created_at: item.date,
+        }));
+    }
 }
 
 export async function getBackendNewsDetail(id: string) {
-  try {
-    return await apiRequest<BackendNews>(`/news/${id}`);
-  } catch {
-    const item = fallbackNews.find((news) => news.id === id) ?? fallbackNews[0];
-    return {
-      id: item.id,
-      title: item.title,
-      content: item.body,
-      type: item.category,
-      image_url: null,
-      published_at: item.date,
-      created_at: item.date,
-    };
-  }
+    try {
+        return await apiRequest<BackendNews>(`/news/${id}`);
+    } catch {
+        const item =
+            fallbackNews.find((news) => news.id === id) ?? fallbackNews[0];
+
+        return {
+            id: item.id,
+            title: item.title,
+            content: item.body,
+            type: item.category,
+            image_url:
+                'https://images.unsplash.com/photo-1495020689067-958852a7765e?q=80&w=1200&auto=format&fit=crop',
+            published_at: item.date,
+            created_at: item.date,
+        };
+    }
 }
 
 export async function askBackendChatbot(message: string, history: BackendChatMessage[] = []) {
