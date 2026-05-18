@@ -66,10 +66,64 @@ export type BackendChatResponse = {
   context_used?: number;
 };
 
+export type BackendVoiceTranscription = {
+  transcript: string;
+  language: string;
+};
+
+export type BackendVoiceChatResponse = BackendChatResponse & {
+  transcript: string;
+  language: string;
+};
+
 export type BackendChatMessage = {
   role: 'user' | 'assistant';
   content: string;
 };
+
+export type BackendChatLanguage = 'auto' | 'Vietnamese' | 'English';
+
+export function detectBackendChatLanguage(text: string): BackendChatLanguage {
+  const rawText = text || '';
+  const normalized = rawText
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+
+  if (/[ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(rawText)) {
+    return 'Vietnamese';
+  }
+
+  const vietnamesePhrases = [
+    'gia dinh',
+    'ho gia dinh',
+    'hoan canh',
+    'quyen gop',
+    'tai khoan',
+    'ngan hang',
+    'moi nhat',
+    'gan nhat',
+    'cho toi',
+    'cho minh',
+  ];
+  if (vietnamesePhrases.some((phrase) => normalized.includes(phrase)) || /\b(3|ba)\s+ho\b/.test(normalized)) {
+    return 'Vietnamese';
+  }
+
+  const words = new Set(normalized.match(/\b[a-z]{2,}\b/g) ?? []);
+  const vietnameseWords = ['toi', 'minh', 'ban', 'cho', 'biet', 've', 'cac', 'tat', 'ca', 'ho', 'tap', 'moi', 'nhat', 'noi', 'ke', 'giup'];
+  const englishWords = ['what', 'who', 'where', 'when', 'which', 'show', 'tell', 'about', 'latest', 'newest', 'family', 'families', 'episode', 'donation', 'news', 'update', 'bank', 'account', 'household', 'households', 'three'];
+  const vietnameseScore = vietnameseWords.filter((word) => words.has(word)).length;
+  const englishScore = englishWords.filter((word) => words.has(word)).length;
+
+  if (vietnameseScore > englishScore) {
+    return 'Vietnamese';
+  }
+
+  return 'English';
+}
 
 export type BackendToken = {
   access_token: string;
@@ -292,16 +346,77 @@ export async function getBackendNewsDetail(id: string) {
     }
 }
 
-export async function askBackendChatbot(message: string, history: BackendChatMessage[] = []) {
+export async function askBackendChatbot(
+  message: string,
+  history: BackendChatMessage[] = [],
+  language: BackendChatLanguage = detectBackendChatLanguage(message),
+) {
   try {
     return await apiRequest<BackendChatResponse>('/chatbot/', {
       method: 'POST',
-      body: JSON.stringify({ message, history }),
+      body: JSON.stringify({ message, history, language }),
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`${detail} | API: ${API_BASE_URL}/chatbot/`);
   }
+}
+
+export async function transcribeBackendVoiceQuestion(uri: string, language: string) {
+  const extension = uri.split('.').pop()?.toLowerCase() || 'm4a';
+  const mimeType = extension === 'wav' ? 'audio/wav' : extension === 'caf' ? 'audio/x-caf' : 'audio/mp4';
+  const formData = new FormData();
+
+  formData.append('language', language);
+  formData.append('audio', {
+    uri,
+    name: `voice-question.${extension}`,
+    type: mimeType,
+  } as unknown as Blob);
+
+  const response = await fetch(`${API_BASE_URL}/chatbot/transcribe`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Voice transcription failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<BackendVoiceTranscription>;
+}
+
+export async function askBackendVoiceChat(uri: string, language: string, history: BackendChatMessage[] = []) {
+  const extension = uri.split('.').pop()?.toLowerCase() || 'm4a';
+  const mimeType = extension === 'wav' ? 'audio/wav' : extension === 'caf' ? 'audio/x-caf' : 'audio/mp4';
+  const formData = new FormData();
+
+  formData.append('language', language);
+  formData.append('history', JSON.stringify(history));
+  formData.append('audio', {
+    uri,
+    name: `voice-question.${extension}`,
+    type: mimeType,
+  } as unknown as Blob);
+
+  const response = await fetch(`${API_BASE_URL}/chatbot/voice`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Voice chat failed with status ${response.status}`);
+  }
+
+  return response.json() as Promise<BackendVoiceChatResponse>;
 }
 
 export async function loginBackend(email: string, password: string) {

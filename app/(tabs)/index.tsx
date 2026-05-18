@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Href, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
@@ -19,6 +19,7 @@ import { getContentPreview } from '@/components/ui/formatted-content';
 import { PulseSkeleton } from '@/components/ui/pulse-skeleton';
 import { appCopy, palette } from '@/constants/design';
 import { combineFamilyStories, FamilyStory, formatDate, getBackendCases, getBackendEpisodes, getBackendFamilies, getBackendNews, BackendEpisode, BackendNews, imageFromUrl } from '@/data/backend';
+import { cleanEpisodeDescription } from '@/data/episode-details';
 import { episodes, families, featuredCampaigns, newsFeed } from '@/data/mock';
 
 function SectionHeader({ title, action, onPress }: { title: string; action?: string; onPress?: () => void }) {
@@ -76,7 +77,7 @@ export default function HomeScreen() {
     ? backendEpisodes.slice(0, 8).map((episode, index) => ({
         id: episode.id,
         title: episode.title,
-        summary: episode.description ?? '',
+        summary: cleanEpisodeDescription(episode.description, episode.episode_no),
         meta: formatDate(episode.air_date),
         badge: `Ep ${episode.episode_no}`,
         image: imageFromUrl(null, index),
@@ -158,7 +159,7 @@ export default function HomeScreen() {
                         {latestEpisode?.title ?? topStory.title}
                       </Text>
                       <Text className="mt-2 font-beMedium text-[15px] leading-6 text-white/90" numberOfLines={3}>
-                        {latestEpisode?.description ?? topStory.subtitle}
+                        {latestEpisode ? cleanEpisodeDescription(latestEpisode.description, latestEpisode.episode_no) : topStory.subtitle}
                       </Text>
 
                       <View className="mt-5 self-start flex-row items-center rounded-full bg-white px-4 py-3">
@@ -193,7 +194,7 @@ export default function HomeScreen() {
               {displayEpisodes.map((episode, index) => (
                 <Pressable
                   key={episode.id}
-                  onPress={() => router.push('/(tabs)/episodes')}
+                  onPress={() => router.push(`/episode/${episode.id}` as Href)}
                   className="overflow-hidden rounded-2xl bg-[#FAF7F2]"
                   style={[styles.episodeCard, index !== episodes.length - 1 && styles.itemSpacing]}
                 >
@@ -217,6 +218,7 @@ export default function HomeScreen() {
                 </Pressable>
               ))}
             </ScrollView>
+
           </View>
 
           <View className="bg-[#FAF7F2] px-4 py-6">

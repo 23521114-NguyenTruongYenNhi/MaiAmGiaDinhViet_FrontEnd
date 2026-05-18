@@ -10,6 +10,7 @@ class ChatMessage(SQLModel):
 class ChatRequest(SQLModel):
     message: str
     history: Optional[List[ChatMessage]] = None
+    language: Optional[Literal["auto", "Vietnamese", "English", "vi-VN", "en-US"]] = None
 
 
 class ChatResponse(SQLModel):

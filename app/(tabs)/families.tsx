@@ -30,6 +30,14 @@ type EpisodeFilter = {
   familyNames: string[];
 };
 
+function getEpisodeLabel(episodeNo: number) {
+  return `Episode ${episodeNo}`;
+}
+
+function getEpisodeSummary(familyCount: number) {
+  return `${familyCount} verified ${familyCount === 1 ? 'family' : 'families'}`;
+}
+
 function normalizeSearchText(value?: string | null) {
   return (value ?? '')
     .normalize('NFD')
@@ -175,7 +183,7 @@ export default function FamiliesScreen() {
       return 'Saved families';
     }
     if (selectedEpisode) {
-      return `Episode ${selectedEpisode} families`;
+      return `${getEpisodeLabel(selectedEpisode)} families`;
     }
     if (showAllFamilies) {
       return 'All families by episode';
@@ -310,11 +318,11 @@ export default function FamiliesScreen() {
                     style={styles.episodeCard}
                   >
                     <View className="flex-row items-center justify-between">
-                      <Text className={`font-beBold text-[11px] uppercase ${isSelected ? 'text-white' : 'text-primary'}`}>Episode {episode.episodeNo}</Text>
+                      <Text className={`font-beBold text-[11px] uppercase ${isSelected ? 'text-white' : 'text-primary'}`}>{getEpisodeLabel(episode.episodeNo)}</Text>
                       <Text className={`font-beBold text-[10px] uppercase ${isSelected ? 'text-[#FBE9E7]' : 'text-[#B7842D]'}`}>{episode.familyCount} families</Text>
                     </View>
                     <Text className={`mt-2 font-beSemiBold text-sm leading-5 ${isSelected ? 'text-white' : 'text-[#261F1A]'}`} numberOfLines={2}>
-                      {episode.episodeTitle}
+                      {getEpisodeSummary(episode.familyCount)}
                     </Text>
                     <Text className={`mt-1 font-beRegular text-[11px] leading-4 ${isSelected ? 'text-[#FBE9E7]' : 'text-[#756B63]'}`} numberOfLines={2}>
                       {episode.familyNames.slice(0, 3).join(', ')}
@@ -353,8 +361,8 @@ export default function FamiliesScreen() {
                 <View key={story.caseId}>
                   {showEpisodeDivider ? (
                     <View className="mb-3 mt-1 flex-row items-center justify-between">
-                      <Text className="font-beBold text-sm uppercase text-primary">Episode {story.episodeNo}</Text>
-                      <Text className="font-beMedium text-[11px] text-[#B7842D]" numberOfLines={1}>{story.episodeTitle}</Text>
+                      <Text className="font-beBold text-sm uppercase text-primary">{getEpisodeLabel(story.episodeNo)}</Text>
+                      <Text className="font-beMedium text-[11px] text-[#B7842D]" numberOfLines={1}>Featured families</Text>
                     </View>
                   ) : null}
 
@@ -368,7 +376,7 @@ export default function FamiliesScreen() {
                     <View className="p-4">
                       <View className="mb-3 flex-row items-center justify-between">
                         <View className="rounded-full bg-white px-3 py-1.5">
-                          <Text className="font-beBold text-[10px] uppercase text-primary">Episode {story.episodeNo}</Text>
+                          <Text className="font-beBold text-[10px] uppercase text-primary">{getEpisodeLabel(story.episodeNo)}</Text>
                         </View>
                         <Pressable onPress={() => void toggleSaved(story.caseId)} hitSlop={10}>
                           <Ionicons name={isSaved ? 'heart' : 'heart-outline'} size={21} color={palette.primary} />
@@ -376,7 +384,7 @@ export default function FamiliesScreen() {
                       </View>
 
                       <Text className="font-beBold text-[21px] leading-[27px] text-[#261F1A]">{story.name}</Text>
-                      <Text className="mt-1 font-beMedium text-xs leading-5 text-[#B7842D]" numberOfLines={1}>{story.episodeTitle}</Text>
+                      <Text className="mt-1 font-beMedium text-xs leading-5 text-[#B7842D]" numberOfLines={1}>{story.location}</Text>
 
                       <View className="mt-4 flex-row flex-wrap gap-2">
                         <View className="flex-row items-center rounded-full bg-white px-3 py-2">

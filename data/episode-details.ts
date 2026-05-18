@@ -80,17 +80,36 @@ const supportFocusPool = [
 function cleanName(value: string) {
   return value
     .replace(/\s+/g, ' ')
+    .replace(/^(?:along with|with)\s+/i, '')
+    .replace(/^(?:artist|actor|actress|singer|rapper|mc|guest artist)\s*[-:]?\s*/i, '')
     .replace(/[.,;:]+$/g, '')
     .trim();
 }
 
 function splitPeople(value: string) {
   return value
+    .replace(/\balong with\s+/gi, '')
+    .replace(/\bArtist\s*-\s*/gi, '')
     .replace(/\s+namely\s+/i, ' ')
     .replace(/\s+together overcame.*$/i, '')
     .split(/\s*(?:,| - | and | va | và)\s*/i)
     .map(cleanName)
     .filter(Boolean);
+}
+
+export function cleanEpisodeDescription(description: string | null | undefined, episodeNo: number) {
+  return (description ?? '')
+    .replace(new RegExp(`^\\s*Episode\\s*${episodeNo}\\s*-\\s*`, 'i'), '')
+    .replace(/(?:with the guidance of|along with).+?(?:together overcame|together overcome)/i, 'featured community challenges')
+    .replace(/\balong with artists?\b/gi, 'with guest artists')
+    .replace(/\bfeatured community challenges\s+challenges\b/i, 'featured community challenges')
+    .replace(/\bto help 3 situations:?\s*/i, 'to support ')
+    .replace(/\bbringing (?:back|home) many valuable rewards to help cover their lives\.?/i, 'and closed with practical support for the featured families.')
+    .replace(/^Vietnamese Family Home/i, 'The broadcast')
+    .replace(/^The warm Vietnamese family/i, 'The broadcast')
+    .replace(/^Vietnamese family warm home/i, 'The broadcast')
+    .replace(/^Vietnamese family home/i, 'The broadcast')
+    .trim();
 }
 
 function deriveNamesFromDescription(description?: string | null) {

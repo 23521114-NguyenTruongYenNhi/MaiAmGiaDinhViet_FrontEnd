@@ -1,6 +1,7 @@
 pyproject.toml
 app/__init__.py
 app/check_gemini_models.py
+app/create_admin.py
 app/main.py
 app/seed_data.py
 app/test_db.py
@@ -9,7 +10,9 @@ app/core/config.py
 app/core/security.py
 app/db/__init__.py
 app/db/import_clean_data.py
+app/db/seed_admin.py
 app/db/session.py
+app/db/sync_news.py
 app/dependencies/__intit__.py
 app/dependencies/auth.py
 app/models/__init__.py
@@ -19,6 +22,7 @@ app/models/family.py
 app/models/news.py
 app/models/user.py
 app/models/user_case_action.py
+app/models/user_episode_action.py
 app/routers/__init__.py
 app/routers/auth.py
 app/routers/cases.py
@@ -27,6 +31,7 @@ app/routers/episodes.py
 app/routers/families.py
 app/routers/news.py
 app/routers/user_case_actions.py
+app/routers/user_episode_actions.py
 app/routers/users.py
 app/schemas/__init__.py
 app/schemas/auth.py
@@ -37,6 +42,7 @@ app/schemas/family.py
 app/schemas/news.py
 app/schemas/user.py
 app/schemas/user_case_action.py
+app/schemas/user_episode_action.py
 maiam_backend.egg-info/PKG-INFO
 maiam_backend.egg-info/SOURCES.txt
 maiam_backend.egg-info/dependency_links.txt
